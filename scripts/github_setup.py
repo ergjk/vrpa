@@ -106,8 +106,13 @@ def main(argv: list[str] | None = None) -> int:
             ["repo", "view", args.repo, "--json", "description,repositoryTopics"],
             dry_run=False,
         )
-        if result is not None:
-            print("verify :", json.dumps(json.loads(result.stdout), ensure_ascii=False))
+        if result is not None and result.stdout.strip():
+            try:
+                print("verify :", json.dumps(json.loads(result.stdout), ensure_ascii=False))
+            except json.JSONDecodeError:
+                print("verify : 输出非 JSON，跳过")
+        else:
+            print("verify : gh 未返回 JSON，跳过（可用 gh repo view 手动核对）")
     return 0
 
 
