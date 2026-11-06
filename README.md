@@ -105,6 +105,7 @@ docs/                     # 技术方案、行动清单、架构、ADR、适配�
 scripts/quality.ps1|.bat  # 一键质量门禁（ruff + mypy strict + pytest + coverage）
 scripts/mouse_record.py   # 真机调试：记录手动拖选鼠标轨迹（用于校准 capture.drag）
 scripts/input_check.py    # 真机调试：检查鼠标注入/剪贴板是否可用（无需微信）
+scripts/soak_real.ps1|.bat # 真机浸泡循环（只读 dry-run，JSONL 日志 + 汇总，失败即停）
 wechat_agent/             # 微信参考实现（六层模块见 §5.1）
   main.py                 #   CLI 入口 / 子命令注册 / 退出码映射
   adapter.py adapters.py  #   WeChatAdapter（五端口装配）+ ADAPTER_REGISTRY（M0-F-05）
@@ -190,6 +191,7 @@ python -m wechat_agent replay --scenario tests/fixtures/dedup_scenarios/01_basic
 python -m wechat_agent run --simulate --scenario tests/fixtures/simulation/01_basic_flow.json   # 全链路 dry-run 模拟
 python -m wechat_agent run --real --chat 目标会话 --warmup 8 --settle 3 --json  # 真机 dry-run（真实采集/入库/LLM，不真实发送）
 python -m wechat_agent run --real --chat 目标会话 --warmup 8 --settle 3 --multi --json  # 多条采集：先回底→左下贴边向上框选
+scripts\soak_real.bat -Iterations 20 -IntervalSeconds 20  # 真机浸泡（管理员；不真实发送；日志在 data/soak_real/）
 # run --real 输出 timing（warmup/activate/switch_session/capture/ingest/reply/ticks/total 毫秒）
 python -m wechat_agent llm-ping                # LLM 连通性（需 DEEPSEEK_API_KEY）
 python -m wechat_agent send --chat 张三 --text 你好   # 控制台发送（默认 dry_run）
