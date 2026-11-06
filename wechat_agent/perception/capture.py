@@ -48,6 +48,27 @@ def _sample_end_hold(*, multi: bool = False) -> float:
 _EDGE_DRAG_PLAN: tuple[tuple[float, float], tuple[float, float]] = ((0.02, 0.01), (0.95, 1.02))
 # 恢复重试轨迹：略高起点，避免首条/末条气泡边缘选不中。
 _RETRY_DRAG_PLAN: tuple[tuple[float, float], tuple[float, float]] = ((0.06, 0.03), (0.95, 1.00))
+
+
+def _start_outside_bubble(text_area: Rect, bubble_area: Rect) -> tuple[int, int] | None:
+    """起点区 = 文本框区 - (文本框区 ∩ 气泡-头像区)，取剩余横向较宽区间的顶部中点。"""
+    overlap_left = max(text_area.x, bubble_area.x)
+    overlap_right = min(text_area.right, bubble_area.right)
+    if overlap_right <= overlap_left:
+        candidates = [(text_area.x, text_area.right)]
+    else:
+        candidates = []
+        if overlap_left > text_area.x:
+            candidates.append((text_area.x, overlap_left))
+        if overlap_right < text_area.right:
+            candidates.append((overlap_right, text_area.right))
+    candidates = [span for span in candidates if span[1] > span[0]]
+    if not candidates:
+        return None
+    left, right = max(candidates, key=lambda span: (span[1] - span[0], span[0]))
+    return ((left + right) // 2, text_area.y + 2)
+
+
 # 多条采集：终点越界（-5%），配合更长停留，尽量一次划到顶部。
 _EDGE_MULTI_DRAG_PLAN: tuple[tuple[float, float], tuple[float, float]] = ((0.02, 0.01), (0.95, 1.03))
 
@@ -148,14 +169,25 @@ class WeChatPerception:
         multi_message = end[1] < start[1] or drag.from_y < 0 or drag.from_y > 1 or drag.to_y < 0 or drag.to_y > 1
         start_source = "config"
         if multi_message:
+            bubble_area = None
             try:
-                start_area = self._tree.locate("drag_start_area")
+                bubble_area = self._tree.locate("bubble_avatar_area")
             except (ElementNotVisible, TreeConfigError):
-                start_area = None
-            if start_area is not None:
-                # 起点区顶部中点：贴近上边界，又不落在气泡/头像内部
-                start = (start_area.center[0], start_area.y + 2)
-                start_source = "drag_start_area"
+                bubble_area = None
+            if bubble_area is not None:
+                computed = _start_outside_bubble(area, bubble_area)
+                if computed is not None:
+                    start = computed
+                    start_source = "message_area-bubble_avatar_area"
+            if start_source == "config":
+                try:
+                    start_area = self._tree.locate("drag_start_area")
+                except (ElementNotVisible, TreeConfigError):
+                    start_area = None
+                if start_area is not None:
+                    # 显式起点区：顶部中点
+                    start = (start_area.center[0], start_area.y + 2)
+                    start_source = "drag_start_area"
         retry_start = (
             area.x + int(round(area.width * _RETRY_DRAG_PLAN[0][0])),
             area.y + int(round(area.height * _RETRY_DRAG_PLAN[0][1])),

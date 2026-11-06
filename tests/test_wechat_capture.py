@@ -12,7 +12,11 @@ from vrpa.ports import Rect
 from vrpa.testing.fakes import FakeDriver, FakeElementTree, FakeWindowBackend
 from vrpa.vision.window import WindowInfo
 from wechat_agent.core.config import load_config
-from wechat_agent.perception.capture import WeChatPerception, _sample_end_hold
+from wechat_agent.perception.capture import (
+    WeChatPerception,
+    _sample_end_hold,
+    _start_outside_bubble,
+)
 from wechat_agent.perception.window import WeChatWindow
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -195,3 +199,35 @@ def test_capture_uses_drag_start_area(tmp_path: Path) -> None:
     assert perception.capture("测试会话") == CAPTURED
     assert driver.drags[0][0] == (start_area.center[0], start_area.y + 2)
     assert perception.last_capture_info["start_source"] == "drag_start_area"
+
+
+def test_start_outside_bubble_uses_right_strip() -> None:
+    text = Rect(100, 200, 400, 300)
+    assert _start_outside_bubble(text, Rect(100, 200, 100, 300)) == (350, 202)
+    # 气泡-头像区覆盖整个文本框区 -> 无补集
+    assert _start_outside_bubble(text, Rect(100, 200, 400, 300)) is None
+
+
+def test_capture_uses_bubble_avatar_complement(tmp_path: Path) -> None:
+    cfg = _config(tmp_path)
+    drag = dataclasses.replace(cfg.capture.drag, from_x=0.02, from_y=0.01, to_x=0.95, to_y=1.03)
+    cfg = dataclasses.replace(cfg, capture=dataclasses.replace(cfg.capture, drag=drag))
+    tree = FakeElementTree(
+        element_rects={
+            "message_area": AREA,
+            "search_box": Rect(0, 0, 10, 10),
+            "chat_title": Rect(0, 0, 5, 5),
+            "bubble_avatar_area": Rect(AREA.x, AREA.y, 100, AREA.height),
+        }
+    )
+    driver = FakeDriver(scripted=("旧剪贴板", CAPTURED))
+    perception = WeChatPerception(
+        cfg,
+        tree=tree,
+        driver=driver,
+        window=WeChatWindow(cfg, FakeWindowBackend(INFO)),
+        sleep=lambda _s: None,
+    )
+    assert perception.capture("测试会话") == CAPTURED
+    assert driver.drags[0][0] == (AREA.x + 100 + (AREA.width - 100) // 2, AREA.y + 2)
+    assert perception.last_capture_info["start_source"] == "message_area-bubble_avatar_area"
