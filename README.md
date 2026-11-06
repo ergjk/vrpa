@@ -262,6 +262,12 @@ python -m mypy                # vrpa 框架包 strict
 
 ---
 
-## 13. License
+## 13. AI 生成声明（AI-Generated Declaration）
+
+1. 本项目的大量代码与文档由大语言模型（如 DeepSeek 等）辅助生成，并经主控官审阅、测试与验收后提交。
+2. 本项目遵循 MIT 开源协议（详见 LICENSE 文件）；AI 生成内容不代表任何平台（包括但不限于微信、QQ、钉钉、飞书等）的官方立场，也不构成任何平台授权或背书。
+3. 使用本项目进行自动化操作时，请自行遵守目标平台的服务条款与当地法律法规；因使用本项目产生的风险与责任由使用者自行承担。
+
+## 14. License
 
 [MIT License](LICENSE) © 2026 ergjk
