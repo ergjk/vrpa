@@ -82,6 +82,21 @@ class CalibrationSession:
 
         image = self._capture()
         rect = self._normalize_rect(self._selector(image), image)
+        if role == "container":
+            # 容器（窗口/消息区）内容动态，整块截图不适合做锚点：只存静态矩形。
+            self._elements[element_id] = ElementSpec(
+                element_id=element_id,
+                role="container",
+                purpose=purpose,
+                parent=parent,
+                anchors=(),
+                rect=(rect.x, rect.y, rect.width, rect.height),
+                meta={
+                    "calibrated_at": datetime.now().isoformat(timespec="seconds"),
+                    "static_rect": True,
+                },
+            )
+            return rect
         self._anchors_root.mkdir(parents=True, exist_ok=True)
         anchor_rel = f"{element_id}.png"
         crop = image[rect.y : rect.bottom, rect.x : rect.right]

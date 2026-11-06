@@ -62,6 +62,7 @@ class AnchorMatcher:
         self._scales = tuple(float(scale) for scale in scales)
         self._grayscale = grayscale
         self._max_side_px = int(max_side_px)
+        self.last_score: float = 0.0
 
     def match(
         self,
@@ -75,6 +76,7 @@ class AnchorMatcher:
         limit = self._threshold if threshold is None else float(threshold)
         scale_list = self._scales if scales is None else tuple(float(item) for item in scales)
         if screen.size == 0 or template.size == 0:
+            self.last_score = 0.0
             return None
 
         screen_work = self._prepare(screen)
@@ -107,6 +109,7 @@ class AnchorMatcher:
             if best is None or max_value > best[0]:
                 best = (float(max_value), (int(max_location[0]), int(max_location[1])), scale, width, height)
 
+        self.last_score = 0.0 if best is None else best[0]
         if best is None or best[0] < limit:
             return None
         _, (left, top), scale, _, _ = best

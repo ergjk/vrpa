@@ -9,7 +9,7 @@ import pytest
 from vrpa.errors import WindowNotForeground, WindowNotFound
 from vrpa.ports import Rect
 from vrpa.testing.fakes import FakeWindowBackend
-from vrpa.vision.window import WindowInfo
+from vrpa.vision.window import PywinautoWindowBackend, WindowInfo
 from wechat_agent.core.config import load_config
 from wechat_agent.perception.window import WeChatWindow
 
@@ -57,3 +57,54 @@ def test_ensure_foreground_timeout() -> None:
     with pytest.raises(WindowNotForeground):
         window.ensure_foreground()
     assert backend.activated
+
+
+class _FakeRect:
+    def __init__(self) -> None:
+        self.left, self.top, self.right, self.bottom = 10, 20, 810, 620
+
+
+class _FakePwWindow:
+    def __init__(self, title: str, hwnd: int = 123) -> None:
+        self._title, self._hwnd = title, hwnd
+
+    def window_text(self) -> str:
+        return self._title
+
+    def process_id(self) -> int:
+        return 4
+
+    def rectangle(self):
+        return _FakeRect()
+
+    @property
+    def handle(self) -> int:
+        return self._hwnd
+
+
+class _FakeDesktop:
+    def __init__(self, windows) -> None:
+        self._windows = windows
+
+    def windows(self, **_kwargs):
+        return list(self._windows)
+
+
+class _FallbackBackend(PywinautoWindowBackend):
+    def __init__(self, mapping) -> None:
+        super().__init__()
+        self._mapping = mapping
+
+    def _desktop_instance(self, backend="uia"):
+        return self._mapping[backend]
+
+
+def test_uia_empty_falls_back_to_win32() -> None:
+    backend = _FallbackBackend({"uia": _FakeDesktop([]), "win32": _FakeDesktop([_FakePwWindow("微信")])})
+    info = backend.find(title_regex="^微信$", process_names=())
+    assert info is not None and info.title == "微信" and info.hwnd == 123
+
+
+def test_both_backends_empty_returns_none() -> None:
+    backend = _FallbackBackend({"uia": _FakeDesktop([]), "win32": _FakeDesktop([])})
+    assert backend.find(title_regex="^微信$", process_names=()) is None

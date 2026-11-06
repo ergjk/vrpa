@@ -1,0 +1,18 @@
+# 身份映射示例（手动编辑；复制到 data/identity.toml 后生效）
+# 说明：
+#   - 会话主键 = 会话名（你设置的备注/群名），相对稳定；
+#   - nicknames = 对方可能出现的昵称（可写多个，昵称变化时手动补上旧/新值）；
+#   - 如无备注：会话名 = 昵称，此时 nicknames 可省略（校验直接用会话名）；
+#     但昵称变更会导致会话主键变化，建议常用联系人设置备注；
+#   - canonical_id 可选，用于未来身份迁移；
+#   - data/identity.toml 已被 .gitignore 忽略，不会提交；本示例文件受版本管理。
+
+[chats."王衢665"]
+canonical_id = "wxid_test_placeholder"
+nicknames = ["三"]
+
+# 群聊（V1.0 暂不解析成员身份，仅预留；群名变化时手动更新键名）
+# [groups."测试群备注"]
+# canonical_id = "12345678901@chatroom"
+# [groups."测试群备注".members]
+# "三" = "wxid_member_placeholder"

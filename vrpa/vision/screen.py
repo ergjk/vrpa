@@ -46,6 +46,9 @@ class AutoScreenSource:
     """真实截屏源（延迟导入 pyautogui）。"""
 
     def capture(self) -> Image:
+        from vrpa.vision.dpi import enable_dpi_awareness
+
+        enable_dpi_awareness()
         try:
             import pyautogui  # type: ignore[import-untyped]
         except ModuleNotFoundError as exc:

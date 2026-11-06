@@ -12,7 +12,7 @@ platform:
   kind: wechat
   options:
     window_title_regex: "^(微信|WeChat)$"
-    process_names: ["WeChat.exe", "WeChatAppEx.exe"]
+    process_names: ["WeChat.exe", "WeChatAppEx.exe", "Weixin.exe"]   # 4.x 客户端进程名为 Weixin.exe
     activate_before_action: true
     chat_type_default: private     # private | group
     switch_chat: search_box        # search_box（推荐） | session_list
@@ -47,8 +47,11 @@ capture:
   drag:
     from: {x: 0.94, y: 0.14}     # 相对 message_area 元素的比例（避开滚动条/头像）
     to: {x: 0.06, y: 0.92}
-    steps: 18                    # 分段移动步数（模拟人手）
-    duration: 0.45               # 拖拽总时长（秒）
+    steps: 24                    # 分段移动步数（模拟人手）
+    duration: 0.9                # 拖拽总时长（秒；真机过快会选不中）
+    jitter_px: 6                 # 中间路径随机抖动像素
+    hold_before: 0.15            # 按下后停顿（秒）
+    hold_after: 0.0              # 已由程序按 0.3/0.6/0.9 泊松采样 ±0.1s（字段保留兼容）
   copy_wait: 0.35                # Ctrl+C 后等待剪贴板稳定
   min_messages: 3                # 一屏少于 3 条视为异常
   lookback_screens: 3            # 失锚时向上回滚屏数

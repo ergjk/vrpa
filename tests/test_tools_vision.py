@@ -10,7 +10,13 @@ import pytest
 from vision_fixtures import paint_patches, save_png
 from vrpa.ports import Rect
 from wechat_agent import main as main_module
-from wechat_agent.tools.calibrate import run_calibrate
+from wechat_agent.tools.calibrate import (
+    _ELEMENT_HINTS,
+    _display_to_image_rect,
+    _element_label,
+    _fit_scale,
+    run_calibrate,
+)
 from wechat_agent.tools.locate import run_locate
 from wechat_agent.tools.validate_tree import run_validate_tree
 
@@ -223,3 +229,28 @@ def test_cli_import_profile_mismatch(workspace: dict[str, Path], tmp_path: Path)
         )
         == 7
     )
+
+
+def test_element_label_contains_index_and_hint() -> None:
+    label = _element_label("input_box", 5, 6)
+    assert label == "[5/6] input_box — 底部文本输入框"
+    assert _element_label("unknown", 1, 6) == "[1/6] unknown"
+
+
+def test_all_profile_elements_have_hints() -> None:
+    for element_id in ("main_window", "chat_title", "search_box", "message_area", "input_box", "send_button"):
+        assert element_id in _ELEMENT_HINTS
+
+
+def test_fit_scale_for_hi_dpi_screenshot() -> None:
+    # 物理截图 2560x1440，逻辑屏幕 1280x720（200% 缩放）-> 显示缩小 50%
+    assert _fit_scale(2560, 1440, 1280, 720) == 0.5
+    assert _fit_scale(1280, 720, 1280, 720) == 1.0
+    assert _fit_scale(800, 600, 1280, 720) == 1.0
+
+
+def test_display_rect_maps_back_to_original_pixels() -> None:
+    rect = _display_to_image_rect(10, 20, 110, 70, scale=0.5, image_w=2560, image_h=1440)
+    assert rect.as_tuple() == (20, 40, 200, 100)
+    clamped = _display_to_image_rect(90, 90, 120, 120, scale=1.0, image_w=100, image_h=100)
+    assert clamped.as_tuple() == (90, 90, 10, 10)

@@ -77,25 +77,35 @@ class PywinautoWindowBackend:
     """pywinauto 实现（延迟导入；无桌面/缺依赖时抛 WindowNotFound）。"""
 
     def __init__(self) -> None:
-        self._desktop: Any = None
+        self._desktops: dict[str, Any] = {}
 
-    def _desktop_instance(self) -> Any:
-        if self._desktop is None:
+    def _desktop_instance(self, backend: str = "uia") -> Any:
+        if backend not in self._desktops:
             try:
                 from pywinauto import Desktop  # type: ignore[import-untyped]
             except ModuleNotFoundError as exc:
                 raise WindowNotFound("缺少 pywinauto 依赖：无法枚举窗口") from exc
-            self._desktop = Desktop(backend="uia")
-        return self._desktop
+            self._desktops[backend] = Desktop(backend=backend)
+        return self._desktops[backend]
 
     def find(self, *, title_regex: str, process_names: Sequence[str]) -> WindowInfo | None:
         try:
             pattern = re.compile(title_regex)
         except re.error as exc:
             raise WindowNotFound(f"窗口标题正则非法：{exc}") from exc
-        try:
-            desktop = self._desktop_instance()
-            for window in desktop.windows(visible_only=True, enabled_only=True):
+        # 真实机兼容：部分新版客户端 UIA 枚举为空，需降级 win32 枚举。
+        errors: list[Exception] = []
+        for backend in ("win32", "uia"):
+            try:
+                desktop = self._desktop_instance(backend)
+            except WindowNotFound:
+                raise
+            try:
+                windows = list(desktop.windows(visible_only=True, enabled_only=True))
+            except Exception as exc:  # noqa: BLE001 - 单个后端失败则尝试下一个
+                errors.append(exc)
+                continue
+            for window in windows:
                 title = str(window.window_text() or "")
                 if not pattern.search(title):
                     continue
@@ -103,10 +113,8 @@ class PywinautoWindowBackend:
                 if process_names and info.process_name and info.process_name not in process_names:
                     continue
                 return info
-        except WindowNotFound:
-            raise
-        except Exception as exc:  # noqa: BLE001 - 窗口系统异常统一映射
-            raise WindowNotFound(f"枚举窗口失败：{exc}") from exc
+        if len(errors) >= 2:  # noqa: PLR2004 - 两个后端都失败才视为枚举异常
+            raise WindowNotFound(f"枚举窗口失败：{errors[-1]}") from errors[-1]
         return None
 
     def activate(self, hwnd: int) -> None:

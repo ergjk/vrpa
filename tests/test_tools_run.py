@@ -51,9 +51,8 @@ def test_circuit_breaker_scenario(capsys: pytest.CaptureFixture[str]) -> None:
     assert payload["failures"] == 3
 
 
-def test_real_run_requires_m6(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_run_requires_a_mode(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     assert run_run([]) == 2
-    assert "M6" in capsys.readouterr().err
 
 
 def test_missing_scenario(capsys: pytest.CaptureFixture[str]) -> None:

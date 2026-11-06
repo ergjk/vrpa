@@ -43,7 +43,7 @@ def test_v2_platform_loaded() -> None:
     assert cfg.schema == 2
     assert cfg.platform_kind == "wechat"
     assert "wechat" in cfg.platform_plugin
-    assert cfg.wechat.process_names == ("WeChat.exe", "WeChatAppEx.exe")
+    assert cfg.wechat.process_names == ("WeChat.exe", "WeChatAppEx.exe", "Weixin.exe")
     assert cfg.migrations == ()
 
 

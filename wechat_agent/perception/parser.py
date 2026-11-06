@@ -22,13 +22,18 @@ __all__ = [
     "parse_block",
     "parse_sender_colon",
     "parse_timestamp_prefix",
+    "parse_wechat_block",
 ]
 
-PARSER_STRATEGIES = ("timestamp_prefix", "sender_colon", "multi_line_block")
+PARSER_STRATEGIES = ("wechat_block", "timestamp_prefix", "sender_colon", "multi_line_block")
 
 _TIMESTAMP = r"(?:\d{4}-\d{2}-\d{2}\s+)?\d{1,2}:\d{2}(?::\d{2})?"
 _TIMESTAMP_LINE = re.compile(rf"^(?P<ts>{_TIMESTAMP})\s+(?P<sender>[^:：]{{1,40}}?)\s*[:：]\s?(?P<content>.*)$")
 _SENDER_LINE = re.compile(r"^(?P<sender>[^:：]{1,40}?)\s*[:：]\s?(?P<content>.*)$")
+_CN_DATETIME = re.compile(
+    r"^(?P<year>\d{4})年(?P<month>\d{1,2})月(?P<day>\d{1,2})日\s+"
+    r"(?P<hour>\d{1,2}):(?P<minute>\d{2})(?::(?P<second>\d{2}))?$"
+)
 _SYSTEM_HINTS = ("以下为新消息", "以上是历史消息", "查看更多消息")
 
 
@@ -53,6 +58,36 @@ def _split_blocks(text: str) -> list[tuple[str | None, str | None, str]]:
             ts, sender, content = rows[-1]
             rows[-1] = (ts, sender, f"{content}\n{line}".strip())
     return rows
+
+
+def parse_wechat_block(text: str) -> Sequence[ParsedMessage]:
+    """微信 4.x 复制格式：``发送者 / 2026年11月07日 2:16 / 内容``（空行分块）。"""
+    messages: list[ParsedMessage] = []
+    for block in re.split(r"\n\s*\n", text.strip()):
+        lines = [line.strip() for line in block.splitlines() if line.strip()]
+        if len(lines) < 2:
+            continue
+        date_index = -1
+        date_match = None
+        for index, line in enumerate(lines):
+            match = _CN_DATETIME.match(line)
+            if match is not None:
+                date_index, date_match = index, match
+                break
+        if date_match is None or date_index < 0:
+            continue
+        content = "\n".join(lines[date_index + 1 :]).strip()
+        if not content:
+            continue
+        sender = "\n".join(lines[:date_index]).strip() or None
+        year, month, day = int(date_match.group("year")), int(date_match.group("month")), int(date_match.group("day"))
+        hour, minute = int(date_match.group("hour")), int(date_match.group("minute"))
+        second = date_match.group("second")
+        ts = f"{year:04d}-{month:02d}-{day:02d} {hour:02d}:{minute:02d}"
+        if second:
+            ts += f":{int(second):02d}"
+        messages.append(ParsedMessage(content=content, sender=sender, ts=ts, confidence=0.95, strategy="wechat_block"))
+    return tuple(messages)
 
 
 def parse_timestamp_prefix(text: str) -> Sequence[ParsedMessage]:
@@ -108,6 +143,7 @@ class WeChatParser:
 
     def __init__(self, order: Sequence[str] = PARSER_STRATEGIES) -> None:
         strategies = {
+            "wechat_block": parse_wechat_block,
             "timestamp_prefix": parse_timestamp_prefix,
             "sender_colon": parse_sender_colon,
             "multi_line_block": parse_block,

@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 from vrpa.errors import CopyFailed, ElementNotVisible, SessionSwitchFailed, TreeConfigError
 from vrpa.vision.driver import Driver
+from wechat_agent.identity import IdentityMap, load_identity
 
 if TYPE_CHECKING:  # pragma: no cover
     from wechat_agent.core.config import Config
@@ -31,6 +32,7 @@ class WeChatSessionSwitcher:
         window: WeChatWindow | None = None,
         capture: Callable[[str], str] | None = None,
         sleep: Callable[[float], None] = time.sleep,
+        identity: IdentityMap | None = None,
     ) -> None:
         self._config = config
         self._tree = tree
@@ -38,6 +40,7 @@ class WeChatSessionSwitcher:
         self._window = window
         self._capture = capture
         self._sleep = sleep
+        self._identity = identity
 
     def ensure_chat(self, chat: str) -> None:
         if not chat.strip():
@@ -79,8 +82,25 @@ class WeChatSessionSwitcher:
                 text = self._capture(chat)
             except (CopyFailed, ElementNotVisible, TreeConfigError) as exc:
                 raise SessionSwitchFailed(f"切换后采集失败，无法确认会话 {chat!r}：{exc}") from exc
-            if chat and chat not in text:
+            if chat and chat in text:
+                return
+            identity = self._identity if self._identity is not None else load_identity(self._config.data_dir)
+            if self._identity is None:
+                self._identity = identity
+            nicknames = identity.nicknames_for(chat)
+            if nicknames:
+                if any(nickname in text for nickname in nicknames):
+                    return
+                raise SessionSwitchFailed(
+                    f"切换后采集内容未包含会话名 {chat!r} 的已知昵称 {nicknames}；"
+                    "请在 data/identity.toml 更新对方昵称映射"
+                )
+            if self._config.capture.title_verify == "search_text":
                 raise SessionSwitchFailed(f"切换后采集内容未包含会话名 {chat!r}")
+            raise SessionSwitchFailed(
+                f"切换后采集内容未包含会话名 {chat!r}；微信 4.x 剪贴板只有昵称时，"
+                "请在 data/identity.toml 配置该会话的 nicknames 映射"
+            )
             return
         try:
             self._tree.locate("chat_title")  # type: ignore[attr-defined]

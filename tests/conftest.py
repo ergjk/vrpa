@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 
@@ -13,3 +15,27 @@ import pytest
 def _no_real_llm_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+
+@pytest.fixture(autouse=True)
+def _ignore_repo_dotenv(monkeypatch: pytest.MonkeyPatch) -> None:
+    """测试不读取仓库根 .env（避免真实 Key 触发真实 API 调用）。
+
+    临时目录里的 .env 仍按原逻辑加载，供配置测试使用。
+    """
+    import wechat_agent.core.config as config_module
+
+    repo_root = Path(__file__).resolve().parents[1]
+    repo_env = (repo_root / ".env").resolve()
+    original = config_module.load_dotenv
+
+    def guarded(path: object) -> dict[str, str]:
+        try:
+            resolved = Path(str(path)).resolve()
+        except OSError:
+            return original(path)  # type: ignore[arg-type]
+        if resolved == repo_env:
+            return {}
+        return original(path)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(config_module, "load_dotenv", guarded)

@@ -51,13 +51,18 @@ def test_calibrate_then_finalize_and_locate(tmp_path: Path) -> None:
 
     assert result.profile_path.is_file()
     assert result.element_ids == ("main_window", "input_box")
-    assert (tmp_path / "anchors" / "main_window.png").is_file()
+    # 容器（main_window）内容动态：只存静态 rect，不写锚点
+    assert not (tmp_path / "anchors" / "main_window.png").exists()
     assert (tmp_path / "anchors" / "input_box.png").is_file()
 
     profile = load_profile(result.profile_path, anchors_root=tmp_path / "anchors")
-    assert profile.validate() == []
+    main_spec = profile.get("main_window")
+    assert main_spec.role == "container"
+    assert main_spec.anchors == ()
+    assert main_spec.rect == MAIN.as_tuple()
     screen, _ = paint_patches(600, 400, {"main_window": MAIN, "input_box": INPUT})
     locator = AnchorLocator(profile, ImageScreenSource(screen))
+    assert locator.locate("main_window").as_tuple() == MAIN.as_tuple()
     assert locator.locate("input_box").as_tuple() == INPUT.as_tuple()
     assert locator.validate(required_ids=profile.element_ids()).ok
 

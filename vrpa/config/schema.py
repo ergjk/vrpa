@@ -112,6 +112,9 @@ class DragConfig:
     to_y: float
     steps: int
     duration: float
+    jitter_px: int = 6
+    hold_before: float = 0.15
+    hold_after: float = 0.15
 
 
 @dataclass(frozen=True)
@@ -292,7 +295,11 @@ def parse_capture(raw: Mapping[str, Any]) -> CaptureConfig:
         "capture",
     )
     drag_raw = _expect_mapping(raw.get("drag"), "capture.drag")
-    _check_keys(drag_raw, ("from", "to", "steps", "duration"), "capture.drag")
+    _check_keys(
+        drag_raw,
+        ("from", "to", "steps", "duration", "jitter_px", "hold_before", "hold_after"),
+        "capture.drag",
+    )
     from_raw = _expect_mapping(drag_raw.get("from"), "capture.drag.from")
     to_raw = _expect_mapping(drag_raw.get("to"), "capture.drag.to")
     _check_keys(from_raw, ("x", "y"), "capture.drag.from")
@@ -305,6 +312,11 @@ def parse_capture(raw: Mapping[str, Any]) -> CaptureConfig:
             to_y=_as_ratio(to_raw.get("y"), "capture.drag.to.y"),
             steps=_as_int(drag_raw.get("steps"), "capture.drag.steps", minimum=4, maximum=200),
             duration=_as_float(drag_raw.get("duration"), "capture.drag.duration", minimum_exclusive=True, maximum=10.0),
+            jitter_px=_as_int(drag_raw.get("jitter_px", 6), "capture.drag.jitter_px", minimum=0, maximum=50),
+            hold_before=_as_float(
+                drag_raw.get("hold_before", 0.15), "capture.drag.hold_before", minimum=0.0, maximum=2.0
+            ),
+            hold_after=_as_float(drag_raw.get("hold_after", 0.15), "capture.drag.hold_after", minimum=0.0, maximum=2.0),
         ),
         copy_wait=_as_float(raw.get("copy_wait"), "capture.copy_wait", minimum=0.0, maximum=10.0),
         min_messages=_as_int(raw.get("min_messages"), "capture.min_messages", minimum=1),

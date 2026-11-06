@@ -30,8 +30,11 @@ class Driver(Protocol):
         *,
         steps: int = 18,
         duration: float = 0.45,
+        jitter: float = 0.0,
+        hold_before: float = 0.0,
+        hold_after: float = 0.0,
     ) -> None:
-        """按住左键从 start 拖到 end（模拟人手）。"""
+        """按住左键从 start 拖到 end（人手化路径：抖动 + 停顿）。"""
         ...
 
     def hotkey(self, *keys: str) -> None:
@@ -55,6 +58,9 @@ class PyAutoGuiDriver:
     """pyautogui + pyperclip 实现（延迟导入）。"""
 
     def __init__(self, *, pause: float = 0.02) -> None:
+        from vrpa.vision.dpi import enable_dpi_awareness
+
+        enable_dpi_awareness()
         self._pause = pause
 
     def click(self, x: int, y: int) -> None:
@@ -70,13 +76,40 @@ class PyAutoGuiDriver:
         *,
         steps: int = 18,
         duration: float = 0.45,
+        jitter: float = 0.0,
+        hold_before: float = 0.0,
+        hold_after: float = 0.0,
     ) -> None:
+        import random
+
         import pyautogui
 
         if steps < 4:
             raise CopyFailed(f"拖拽 steps 过小：{steps}")
         pyautogui.moveTo(start[0], start[1], duration=self._pause)
-        pyautogui.dragTo(end[0], end[1], duration=max(0.05, duration), button="left")
+        if hold_before > 0:
+            time.sleep(hold_before)
+        pyautogui.mouseDown()
+        try:
+            total = max(4, int(steps))
+            width, height = pyautogui.size()
+            for index in range(1, total):
+                ratio = index / total
+                x = start[0] + (end[0] - start[0]) * ratio
+                y = start[1] + (end[1] - start[1]) * ratio
+                if jitter > 0:
+                    x += random.uniform(-jitter, jitter)
+                    y += random.uniform(-jitter, jitter)
+                pyautogui.moveTo(
+                    max(0, min(width - 1, int(round(x)))),
+                    max(0, min(height - 1, int(round(y)))),
+                    duration=max(0.01, duration / total),
+                )
+            pyautogui.moveTo(end[0], end[1], duration=max(0.05, duration / total))
+        finally:
+            pyautogui.mouseUp()
+        if hold_after > 0:
+            time.sleep(hold_after)
 
     def hotkey(self, *keys: str) -> None:
         import pyautogui

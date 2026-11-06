@@ -73,7 +73,8 @@ def test_capture_returns_clipboard_text(tmp_path: Path) -> None:
 def test_capture_without_restore(tmp_path: Path) -> None:
     perception, driver, _ = _perception(tmp_path=tmp_path, restore=False, scripted=(CAPTURED,))
     assert perception.capture("测试会话") == CAPTURED
-    assert driver.clipboard_sets == []
+    # 即使不恢复旧剪贴板，也会先写入防伪哨兵
+    assert len(driver.clipboard_sets) == 1 and driver.clipboard_sets[0].startswith("__vrpa_clipboard_")
 
 
 def test_capture_empty_clipboard_raises(tmp_path: Path) -> None:

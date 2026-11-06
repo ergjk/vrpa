@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import sys
 import tempfile
+import time
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -44,6 +45,12 @@ def _parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--force", action="store_true", help="覆盖已存在的 profile")
     parser.add_argument("--image", default=None, help="离线模式截图（PNG/JPG）")
     parser.add_argument("--rects", default=None, help="离线模式矩形：id=x,y,w,h;id2=...")
+    parser.add_argument(
+        "--warmup",
+        type=float,
+        default=5.0,
+        help="交互校准前的准备倒计时秒数（默认 5；截图在倒计时结束后拍摄）",
+    )
     return parser.parse_args(list(argv))
 
 
@@ -77,23 +84,106 @@ def _parse_parents(items: Sequence[str]) -> dict[str, str]:
     return parents
 
 
-def _tk_selector(image: Image) -> Rect:
+_CONTAINER_ELEMENTS = frozenset({"main_window", "message_area"})
+
+_ELEMENT_HINTS: dict[str, str] = {
+    "main_window": "整个微信主窗口",
+    "chat_title": "当前会话顶部标题（联系人/群名）",
+    "search_box": "左上角搜索输入框",
+    "message_area": "中间消息列表区域（标题下、输入框上）",
+    "input_box": "底部文本输入框",
+    "send_button": "底部「发送」按钮",
+}
+
+
+def _element_label(element_id: str, index: int, total: int) -> str:
+    """框选窗口标题文案：[序号/总数] 元素 — 区域提示。"""
+    hint = _ELEMENT_HINTS.get(element_id, "")
+    suffix = f" — {hint}" if hint else ""
+    return f"[{index}/{total}] {element_id}{suffix}"
+
+
+def _fit_scale(image_w: int, image_h: int, screen_w: int, screen_h: int) -> float:
+    """截图完整显示所需的缩放比例（只缩小不放大；DPR 1.0 时为 1.0）。"""
+    if image_w <= 0 or image_h <= 0 or screen_w <= 0 or screen_h <= 0:
+        return 1.0
+    return min(1.0, screen_w / image_w, screen_h / image_h)
+
+
+def _display_to_image_rect(
+    left: int,
+    top: int,
+    right: int,
+    bottom: int,
+    *,
+    scale: float,
+    image_w: int,
+    image_h: int,
+) -> Rect:
+    """把屏幕显示坐标（可能被缩小）换算回原始截图像素坐标并做边界钳制。"""
+    factor = scale if scale > 0 else 1.0
+    x = max(0, min(image_w - 1, int(round(left / factor))))
+    y = max(0, min(image_h - 1, int(round(top / factor))))
+    width = max(1, int(round((right - left) / factor)))
+    height = max(1, int(round((bottom - top) / factor)))
+    width = min(width, image_w - x)
+    height = min(height, image_h - y)
+    return Rect(x, y, width, height)
+
+
+def _tk_selector(image: Image, *, label: str = "") -> Rect:
     """Tkinter 框选：鼠标拖拽返回 Rect。"""
     import tkinter as tk
 
     from PIL import Image as PILImage  # type: ignore[import-untyped]
 
+    root = tk.Tk()
+    image_h, image_w = int(image.shape[0]), int(image.shape[1])
+    screen_w, screen_h = root.winfo_screenwidth(), root.winfo_screenheight()
+    # 预留窗口标题栏/边框高度，避免缩放后窗口仍超出屏幕导致底部被裁。
+    usable_w = max(1, screen_w - 24)
+    usable_h = max(1, screen_h - 96)
+    scale = _fit_scale(image_w, image_h, usable_w, usable_h)
+
     rgb = image[:, :, ::-1] if image.ndim == 3 else image
+    display = PILImage.fromarray(np.asarray(rgb, dtype=np.uint8))
+    if scale < 1.0:
+        display = display.resize(
+            (max(1, int(round(image_w * scale))), max(1, int(round(image_h * scale)))),
+            PILImage.LANCZOS,
+        )
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as handle:
         temp_path = Path(handle.name)
-    PILImage.fromarray(np.asarray(rgb, dtype=np.uint8)).save(temp_path)
+    display.save(temp_path)
 
-    root = tk.Tk()
-    root.title("VRPA calibrate：拖拽框选元素（Esc 取消）")
+    scale_hint = f"（显示缩放 {scale:.0%}）" if scale < 1.0 else ""
+    title = (
+        f"VRPA 校准：请框选 {label}{scale_hint}（Esc 取消）" if label else "VRPA calibrate：拖拽框选元素（Esc 取消）"
+    )
+    root.title(title)
     photo = tk.PhotoImage(file=str(temp_path))
     canvas = tk.Canvas(root, width=photo.width(), height=photo.height())
     canvas.pack()
     canvas.create_image(0, 0, anchor="nw", image=photo)
+    if label:
+        banner = canvas.create_text(
+            photo.width() // 2,
+            20,
+            text=f"请框选：{label}",
+            fill="white",
+            font=("Microsoft YaHei", 14, "bold"),
+        )
+        bounds = canvas.bbox(banner)
+        if bounds is not None:
+            background = canvas.create_rectangle(
+                bounds[0] - 12,
+                bounds[1] - 6,
+                bounds[2] + 12,
+                bounds[3] + 6,
+                fill="#c00000",
+                outline="#c00000",
+            )
+            canvas.tag_lower(background, banner)
     state: dict[str, object] = {"start": None, "rect": None, "rect_id": None}
 
     def on_press(event: tk.Event) -> None:  # type: ignore[type-arg]
@@ -114,7 +204,15 @@ def _tk_selector(image: Image) -> Rect:
             return
         left, top = min(start[0], event.x), min(start[1], event.y)
         right, bottom = max(start[0], event.x), max(start[1], event.y)
-        state["rect"] = Rect(left, top, right - left, bottom - top)
+        state["rect"] = _display_to_image_rect(
+            left,
+            top,
+            right,
+            bottom,
+            scale=scale,
+            image_w=image_w,
+            image_h=image_h,
+        )
         root.destroy()
 
     def on_escape(_event: object = None) -> None:
@@ -239,14 +337,16 @@ def run_calibrate(argv: Sequence[str]) -> int:
             return 2
 
         screen = ImageScreenSource.from_file(args.image) if args.image is not None else AutoScreenSource()
+        current = {"element": "", "label": ""}
         if offline:
-            current = {"element": ""}
 
             def selector(_image: Image) -> Rect:
                 return rects[current["element"]]
 
         else:
-            selector = _tk_selector
+
+            def selector(image: Image) -> Rect:
+                return _tk_selector(image, label=current["label"])
 
         session = CalibrationSession(
             profile_path,
@@ -256,6 +356,17 @@ def run_calibrate(argv: Sequence[str]) -> int:
             anchors_root=config.profile_anchors_dir(),
             dpi_scale=config.display.dpi_scale,
         )
+        warmup = max(0.0, float(getattr(args, "warmup", 5.0) or 0.0))
+        if not offline and warmup > 0:
+            print(f"准备倒计时：{warmup:.0f} 秒后截屏并开始框选（现在请切到微信并保持窗口不动）")
+            remaining = warmup
+            while remaining > 0:
+                time.sleep(min(1.0, remaining))
+                remaining -= 1.0
+                if remaining > 0:
+                    print(f"  剩余 {remaining:.0f} 秒…", flush=True)
+            print("开始截屏，请按终端顺序依次框选 6 个元素（截图已冻结，框选不限时）", flush=True)
+
         pending = list(elements)
         while pending:
             progressed = False
@@ -263,9 +374,14 @@ def run_calibrate(argv: Sequence[str]) -> int:
                 parent = parents.get(element_id)
                 if parent is not None and parent not in session.element_ids:
                     continue
-                if offline:
-                    current["element"] = element_id
-                rect = session.calibrate(element_id, parent=parent)
+                current["element"] = element_id
+                index = len(elements) - len(pending) + 1
+                current["label"] = _element_label(element_id, index, len(elements))
+                rect = session.calibrate(
+                    element_id,
+                    parent=parent,
+                    role="container" if element_id in _CONTAINER_ELEMENTS else "anchor",
+                )
                 print(f"[OK] {element_id} :: rect={rect.as_tuple()}")
                 pending.remove(element_id)
                 progressed = True

@@ -37,7 +37,7 @@ ELEMENT_TREE_PROFILE_SPEC: Mapping[str, Any] = {
 }
 
 PARSER_PACK: Mapping[str, Any] = {
-    "strategies": ["timestamp_prefix", "sender_colon", "multi_line_block"],
+    "strategies": ["wechat_block", "timestamp_prefix", "sender_colon", "multi_line_block"],
     "fallbacks": ["anchor_high", "anchor_single", "count_diff"],
     "min_samples": 15,
 }

@@ -11,6 +11,7 @@ from vrpa.ports import Rect
 from vrpa.testing.fakes import FakeDriver, FakeElementTree, FakeWindowBackend
 from vrpa.vision.window import WindowInfo
 from wechat_agent.core.config import load_config
+from wechat_agent.identity import ChatIdentity, IdentityMap
 from wechat_agent.perception.session import WeChatSessionSwitcher
 from wechat_agent.perception.window import WeChatWindow
 
@@ -98,3 +99,27 @@ def test_ensure_chat_activates_window() -> None:
     )
     switcher.ensure_chat("测试会话")
     assert backend.activated == [INFO.hwnd]
+
+
+def test_capture_verification_with_identity_nickname() -> None:
+    identity = IdentityMap(chats={"测试会话": ChatIdentity(nicknames=("三",))})
+    switcher = WeChatSessionSwitcher(
+        CFG,
+        _tree(),
+        FakeDriver(scripted=("",)),
+        capture=lambda _chat: "三: 你好",
+        sleep=lambda _s: None,
+        identity=identity,
+    )
+    switcher.ensure_chat("测试会话")
+
+    mismatch = WeChatSessionSwitcher(
+        CFG,
+        _tree(),
+        FakeDriver(scripted=("",)),
+        capture=lambda _chat: "别的昵称: 你好",
+        sleep=lambda _s: None,
+        identity=identity,
+    )
+    with pytest.raises(SessionSwitchFailed, match="已知昵称"):
+        mismatch.ensure_chat("测试会话")

@@ -57,7 +57,8 @@ def test_export_package_structure(tmp_path: Path) -> None:
     info = export_package(result.profile, share)
     assert (share / PACKAGE_PROFILE).is_file()
     assert (share / PACKAGE_MANIFEST).is_file()
-    assert (share / PACKAGE_ANCHORS_DIR / "main_window.png").is_file()
+    # main_window 是容器：只存静态 rect，不导出锚点图
+    assert not (share / PACKAGE_ANCHORS_DIR / "main_window.png").exists()
     assert (share / PACKAGE_ANCHORS_DIR / "input_box.png").is_file()
     manifest = json.loads((share / PACKAGE_MANIFEST).read_text(encoding="utf-8"))
     assert manifest["package_version"] == PACKAGE_VERSION

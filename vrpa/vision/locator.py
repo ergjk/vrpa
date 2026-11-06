@@ -59,6 +59,7 @@ class AnchorLocator:
         self._template_loader = template_loader
         self._cache: dict[str, tuple[Rect, float]] = {}
         self._last_match: dict[str, MatchResult] = {}
+        self._best_scores: dict[str, float] = {}
 
     # ------------------------------------------------------------ 公共 API
     def element_ids(self) -> tuple[str, ...]:
@@ -72,6 +73,9 @@ class AnchorLocator:
 
     def last_match(self, element_id: str) -> MatchResult | None:
         return self._last_match.get(element_id)
+
+    def best_score(self, element_id: str) -> float:
+        return self._best_scores.get(element_id, 0.0)
 
     def locate(self, element_id: str) -> Rect:
         """定位元素；失败抛 ``ElementNotVisible``（禁止坐标兜底）。"""
@@ -121,13 +125,15 @@ class AnchorLocator:
         visited.pop()
 
         match = self._match_anchors(spec, region)
+        self._best_scores[spec.element_id] = self._matcher.last_score
         if match is None:
             thresholds = ", ".join(
                 f"{anchor.path}:{anchor.threshold if anchor.threshold is not None else self._matcher._threshold}"
                 for anchor in spec.anchors
             )
             raise ElementNotVisible(
-                f"元素 {spec.element_id} 未匹配到锚点（阈值 {thresholds}；profile={self._profile.profile}）"
+                f"元素 {spec.element_id} 未匹配到锚点（阈值 {thresholds}；"
+                f"最高分 {self._matcher.last_score:.3f}；profile={self._profile.profile}）"
             )
         self._last_match[spec.element_id] = match
         return Rect(

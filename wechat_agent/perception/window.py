@@ -47,6 +47,25 @@ class WeChatWindow:
     def client_rect(self) -> Rect:
         return self.find().client_rect
 
+    def is_foreground(self) -> bool:
+        info = self.find()
+        return bool(self._backend.is_foreground(info.hwnd))
+
+    def foreground_process_name(self) -> str | None:
+        """当前前台窗口的进程名（用于兼容微信 4.x 多顶层窗口）。"""
+        try:
+            import win32gui  # type: ignore[import-untyped]
+
+            from vrpa.vision.window import _process_name
+
+            hwnd = int(win32gui.GetForegroundWindow())
+            if not hwnd:
+                return None
+            _thread_id, pid = win32gui.GetWindowThreadProcessId(hwnd)
+            return _process_name(int(pid))
+        except Exception:  # noqa: BLE001
+            return None
+
     def ensure_foreground(self) -> WindowInfo:
         info = self.find()
         if self._backend.is_foreground(info.hwnd):

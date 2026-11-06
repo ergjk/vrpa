@@ -241,6 +241,7 @@ class FakeDriver:
         self._index = 0
         self.clicks: list[tuple[int, int]] = []
         self.drags: list[tuple[tuple[int, int], tuple[int, int], int, float]] = []
+        self.drag_options: list[dict[str, float]] = []
         self.hotkeys: list[tuple[str, ...]] = []
         self.typed: list[str] = []
         self.clipboard_sets: list[str] = []
@@ -255,8 +256,12 @@ class FakeDriver:
         *,
         steps: int = 18,
         duration: float = 0.45,
+        jitter: float = 0.0,
+        hold_before: float = 0.0,
+        hold_after: float = 0.0,
     ) -> None:
         self.drags.append((start, end, steps, duration))
+        self.drag_options.append({"jitter": jitter, "hold_before": hold_before, "hold_after": hold_after})
 
     def hotkey(self, *keys: str) -> None:
         self.hotkeys.append(tuple(keys))

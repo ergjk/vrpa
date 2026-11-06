@@ -75,3 +75,15 @@ def test_block_parser_blank_line_blocks() -> None:
     assert len(messages) == 2
     assert [message.sender for message in messages] == ["张三", "李四"]
     assert [message.strategy for message in messages] == ["multi_line_block", "multi_line_block"]
+
+
+def test_wechat_block_three_part_format() -> None:
+    raw = "三\n2026年11月07日  2:16\n一条测试的消息哦\n\n三\n2026年11月07日  2:19\n第二行内容\n继续第二行"
+    messages = WeChatParser().parse(raw)
+    assert len(messages) == 2
+    assert messages[0].sender == "三"
+    assert messages[0].ts == "2026-11-07 02:16"
+    assert messages[0].content == "一条测试的消息哦"
+    assert messages[0].reason == "wechat_block"
+    assert messages[1].ts == "2026-11-07 02:19"
+    assert messages[1].content == "第二行内容\n继续第二行"
