@@ -1,6 +1,6 @@
-"""配置路径环境变量优先级测试（M0 框架底座，VRPA_* 前缀）。
+"""配置路径环境变量测试（M0-F-06 弃用清理后：仅 VRPA_CONFIG）。
 
-契约：VRPA_CONFIG > WECHAT_AGENT_CONFIG（应用层兼容回退）> 默认 ./config.yaml
+契约：VRPA_CONFIG > 默认 ./config.yaml（旧 WECHAT_AGENT_CONFIG 已移除）。
 """
 
 from __future__ import annotations
@@ -24,13 +24,11 @@ def test_default_when_no_env() -> None:
     assert default_config_path() == Path("config.yaml")
 
 
-def test_app_legacy_env_still_supported(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("WECHAT_AGENT_CONFIG", "legacy.yaml")
-    with pytest.warns(DeprecationWarning, match="WECHAT_AGENT_CONFIG"):
-        assert default_config_path() == Path("legacy.yaml")
+def test_vrpa_config_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("VRPA_CONFIG", "custom.yaml")
+    assert default_config_path() == Path("custom.yaml")
 
 
-def test_new_env_wins(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_legacy_env_ignored(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("WECHAT_AGENT_CONFIG", "legacy.yaml")
-    monkeypatch.setenv("VRPA_CONFIG", "new.yaml")
-    assert default_config_path() == Path("new.yaml")
+    assert default_config_path() == Path("config.yaml")

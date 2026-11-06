@@ -1,45 +1,19 @@
-"""环境变量解析：``VRPA_*`` 为唯一正式前缀，旧名回退但打印 DeprecationWarning。
+"""环境变量解析：统一 ``VRPA_*`` 前缀（M0-F-06 弃用清理：不再回退旧名）。
 
-设计目标（M0-F-03，ADR-0002）：
+设计目标（M0-F-06，ADR-0002 收口）：
     - 新前缀：``VRPA_CONFIG`` / ``VRPA_DATA_DIR`` / ``VRPA_DEBUG`` 等；
-    - 旧名（如 ``APPNAME_CONFIG``）保留一个里程碑，读取时发 DeprecationWarning；
+    - 旧应用前缀（如 ``APPNAME_*``）已在 M0-F-06 移除，读取不到即视为未设置；
     - 框架内核不硬编码任何平台/应用名。
 """
 
 from __future__ import annotations
 
 import os
-import warnings
-from collections.abc import Sequence
 
-__all__ = ["get_env", "warn_legacy_env"]
+__all__ = ["get_env"]
 
 
-def warn_legacy_env(name: str, replacement: str) -> None:
-    """对使用旧环境变量名的调用方发出弃用告警。"""
-    warnings.warn(
-        f"环境变量 {name} 已弃用，请改用 {replacement}（旧名将在后续里程碑移除）",
-        DeprecationWarning,
-        stacklevel=3,
-    )
-
-
-def get_env(
-    primary: str,
-    legacy: Sequence[str] = (),
-    *,
-    default: str | None = None,
-) -> str | None:
-    """按 ``primary -> legacy[0] -> legacy[1] ...`` 顺序取第一个非空环境变量。
-
-    使用旧名时会发出 DeprecationWarning；全部未设置时返回 ``default``。
-    """
+def get_env(primary: str, *, default: str | None = None) -> str | None:
+    """读取环境变量：非空即返回，否则返回 ``default``。"""
     value = os.environ.get(primary, "").strip()
-    if value:
-        return value
-    for name in legacy:
-        value = os.environ.get(name, "").strip()
-        if value:
-            warn_legacy_env(name, primary)
-            return value
-    return default
+    return value or default

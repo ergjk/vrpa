@@ -8,7 +8,7 @@
 ## 背景
 
 当前 `config.yaml` 顶层是 `schema: 1` + `wechat:` 段，`core/config.py`（967 行）里硬编码了
-`WechatConfig`、`process_names`、`switch_chat`、`WECHAT_AGENT_CONFIG` 等平台字段与环境变量。
+`WechatConfig`、`process_names`、`switch_chat` 等平台字段与环境变量（旧 `WECHAT_AGENT_*` 已于 M0-F-06 移除）。
 复用到底座的其他平台（QQ/钉钉）必须改核心校验器，违反 ADR-0001 的平台无关性红线。
 
 ## 决策
@@ -29,8 +29,8 @@ platform:
 要点：
 
 1. **框架内核只校验通用段**；`platform.options` 交给 `PlatformAdapter.config_schema()` 返回的校验器；
-2. 环境变量前缀统一为 `VRPA_*`；旧 `WECHAT_AGENT_*` 保留一个版本，新名优先，读取旧名时打 `DeprecationWarning`；
-3. 默认配置路径支持 `VRPA_CONFIG`，旧 `WECHAT_AGENT_CONFIG` 兼容；
+2. 环境变量前缀统一为 `VRPA_*`；旧 `WECHAT_AGENT_*` 的过渡回退已于 M0-F-06 移除（读取旧名不再生效）；
+3. 默认配置路径只认 `VRPA_CONFIG`，否则回退 `./config.yaml`；
 4. `schema: 1` 配置在加载时**内存内自动升级**为 v2 并打印迁移提示；提供 `config upgrade` 子命令在 F-03 写回文件；
 5. `selftest` 输出新增平台信息（kind / adapter 版本 / 能力矩阵）。
 
@@ -38,7 +38,7 @@ platform:
 
 - 现有 `tests/test_config.py` 全部保留并通过（v1 夹具自动升级路径必须被覆盖）；
 - 新增测试：v2 正常加载、未知 platform.kind 报 ConfigError、平台 options 校验失败报错（指明平台）、
-  新旧环境变量优先级、v1→v2 升级幂等；
+  v1→v2 升级幂等、旧环境变量已移除（配置路径只认 `VRPA_CONFIG`）；
 - `docs/architecture.md` §5 兼容策略表为唯一依据。
 
 ## 影响文件

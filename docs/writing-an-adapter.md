@@ -1,6 +1,6 @@
 # 编写平台适配器（QQ / 钉钉 / 其他 RPA 场景）
 
-> 状态：可用（M0-F-04：`vrpa.testing.contracts` 已交付并覆盖 10 项检查；新平台按本文接入）。
+> 状态：**定稿 v1.0（M0-F-06）**：契约套件 10 项检查、微信参考实现、框架构件复用清单与验收流程均已定稿。
 > 目标：任何人按本指南实现适配器 + 通过合规测试，即可把 `vrpa` 底座复用到新平台。
 
 ## 0. 适配器 = 平台差异的唯一载体
@@ -112,3 +112,14 @@ python -m vrpa.testing.contracts --adapter myqq.adapter:QQAdapter   # 已提供�
 4. 会话切换后验证 → 用采集到的首条发送者比对，不读标题 OCR；
 5. 窗口失焦 → 动作前校验前台，失败即中止而不是重试点错位置；
 6. 重复文本歧义 → 去重必须用尾部锚点对齐 + 计数差分，不能只比最后一条。
+
+## 9. 定稿检查清单（M0-F-06）
+
+新平台接入前逐项确认：
+
+- [ ] `python -m vrpa.testing.contracts --adapter <模块>:<类>` 输出 `RESULT: PASS (10/10)`；
+- [ ] `platform.kind` 已注册进 `AdapterRegistry`，且 `config_plugin().kind` 与之一致；
+- [ ] 端口实现遵守失败语义（定位失败必须 `ElementNotVisible`，采集失败必须 `CopyFailed`，禁止坐标/内容兜底）；
+- [ ] `parser_pack` 提供 ≥15 份真实样例与 golden 期望，解析失败降级为「只入库不回复」；
+- [ ] 配置只使用 `VRPA_*` 环境变量（旧名已于 M0-F-06 移除），平台字段放在 `platform.options`；
+- [ ] `python -m pytest tests -q`、`python -m ruff check .`、`python -m mypy` 全绿。

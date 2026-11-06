@@ -67,6 +67,9 @@ wechat_agent/                  # 微信应用 + 微信适配器
   profile 元素树（`vrpa/element_tree.py`）已上提框架；`wechat_agent` 只保留「Config 绑定 + 微信字段」薄适配。
 - **解析策略分发（Strategy Dispatcher）**：策略执行器由 `vrpa` 在 M2 提供（`parser_pack` 目前仅声明策略名与
   样例要求）；应用层不承载分发逻辑，也不允许按平台写分支。
+- **配置通用段（M0-F-06）**：`app` / `uia_tree` / `capture` / `llm` / `humanize` / `ratelimit` / `safety` /
+  `control` / `plugins` / `display` 与 `.env` 加载、显示器探测全部由 `vrpa.config.schema` 解析；
+  `wechat_agent/core/config.py` 只保留 `platform.options` 插件校验、`Config` 聚合与 selftest。
 
 ## 5. 兼容策略（已批准）
 
@@ -98,7 +101,7 @@ wechat_agent/                  # 微信应用 + 微信适配器
 | M0-F-03（已完成） | 配置 schema v2：`platform:` 命名空间 + 插件式校验 + `VRPA_*` | 旧 `wechat:` 配置自动升级；`selftest` 输出平台信息 |
 | M0-F-04（已完成） | `ports.py` / `platform.py` / `AdapterRegistry` / `testing.contracts` / `testing.fakes` | contracts kit 可运行；Fake 适配器全绿；反例可检出 |
 | M0-F-05（已完成） | 微信适配器注册 + 应用层去框架化（memory/brain/act/control 接 ports） | `WeChatAdapter` 接入 `AdapterRegistry`；应用接口与 `vrpa.ports` 统一；契约套件 10/10 全绿 |
-| M0-F-06 | 弃用清理、指南定稿、README/CHANGELOG 更新 | 无 DeprecationWarning；文档评审通过 |
+| M0-F-06（已完成） | 弃用清理、指南定稿、README/CHANGELOG 更新 | 旧 shim / `WECHAT_AGENT_*` 环境变量移除；通用配置段上提 `vrpa.config.schema`；适配器指南定稿；无 DeprecationWarning |
 
 ## 8. 与 V1.0 功能里程碑的关系
 

@@ -14,9 +14,7 @@ from dataclasses import replace
 
 import pytest
 
-from wechat_agent import main as main_module
-from wechat_agent.core.config import ConfigError as ConfigErrorFromConfig
-from wechat_agent.core.errors import (
+from vrpa.errors import (
     ERROR_CLASSES,
     EXIT_CODE_MAP,
     AgentFrameworkError,
@@ -39,6 +37,8 @@ from wechat_agent.core.errors import (
     exit_code_for,
     format_exception_chain,
 )
+from wechat_agent import main as main_module
+from wechat_agent.core.config import ConfigError as ConfigErrorFromConfig
 
 EXPECTED_EXIT_CODES: dict[type[AgentFrameworkError], int] = {
     UsageError: 2,
@@ -146,7 +146,7 @@ def test_exit_code_for() -> None:
 
 
 def test_trace_id_attached() -> None:
-    from wechat_agent.core.logging import trace_scope
+    from vrpa.logging import trace_scope
 
     with trace_scope("abcdef12"):
         assert ElementNotVisible("x").trace_id == "abcdef12"

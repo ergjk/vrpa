@@ -7,7 +7,7 @@
     3. 全局异常兜底：AgentFrameworkError -> 自身 exit_code，KeyboardInterrupt / Interrupted -> 130，
        其他异常 -> InternalError(1)，均不打印裸堆栈（DEBUG 模式除外）。
 
-本模块顶层只依赖标准库 + core.errors；各子命令的第三方依赖一律在 handler 内延迟导入，
+本模块顶层只依赖标准库 + vrpa.errors；各子命令的第三方依赖一律在 handler 内延迟导入，
 保证 `--help` / `--version` 在纯净环境（未装 PyYAML / RPA 依赖）也能运行。
 """
 
@@ -124,7 +124,7 @@ def _cmd_selftest(argv: Sequence[str]) -> int:
 
 def _cmd_db_check(argv: Sequence[str]) -> int:
     """M0-06：双库结构与迁移检查（--schema / --repair / --json）。"""
-    from wechat_agent.memory.db import run_db_check
+    from wechat_agent.tools.db_check import run_db_check
 
     return run_db_check(argv)
 

@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from wechat_agent.core.logging import (
+from vrpa.logging import (
     AUDIT_FILE_NAME,
     LOG_BACKUP_COUNT,
     LOG_FILE_NAME,

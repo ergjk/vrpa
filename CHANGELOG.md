@@ -53,8 +53,18 @@
   - 端口资源释放：`Ports.close()` + 契约套件自动关闭 DB 连接，测试在 `-W error::ResourceWarning` 下干净通过
   - 解析策略分发（Strategy Dispatcher）确定由 `vrpa` 在 M2 提供，应用层只提供 parser pack
 
+### Added
+- M0-F-06 弃用清理、指南定稿与配置通用段上提：
+  - 删除 `wechat_agent/core/errors.py`、`wechat_agent/core/logging.py` 兼容 shim（新代码直接 `vrpa.*`）
+  - 删除 `wechat_agent/memory/db.py` 再导出模块；db-check CLI 迁至 `wechat_agent/tools/db_check.py`
+  - 移除 `WECHAT_AGENT_CONFIG` / `WECHAT_AGENT_DATA_DIR` 旧环境变量回退（统一 `VRPA_*`）；`get_env` 取消 legacy 参数
+  - 通用配置段（app / uia_tree / capture / llm / humanize / ratelimit / safety / control / plugins / display）与 `.env` 加载、显示器探测上提 `vrpa/config/schema.py`
+  - `wechat_agent/core/config.py` 仅保留 `platform.options` 插件校验、`Config` 聚合与 selftest（989 -> 579 行）
+  - `docs/writing-an-adapter.md` 定稿 v1.0（新增接入前检查清单）
+  - 测试 206 passed / 覆盖率 91.25%
+
 ### Planned
-- M0-F-06：弃用清理、适配器编写指南定稿
+- M0-F-01 ~ M0-F-06 已全部完成；下一步 M1（假 UIA 树校准与视觉定位）待主控官立项
 - M0-07：环境体检 `doctor`
 - M0-08：控制台骨架
 - M0-09：红线自检 `selftest --redlines`

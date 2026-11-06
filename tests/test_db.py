@@ -15,19 +15,19 @@ from pathlib import Path
 
 import pytest
 
-from wechat_agent.core.errors import DBError, exit_code_for
-from wechat_agent.memory.db import (
+from vrpa.errors import DBError, exit_code_for
+from vrpa.memory.db import (
     DB_KINDS,
     REQUIRED_INDEXES,
     REQUIRED_TABLES,
     SCHEMA_VERSION,
     connect,
     init_databases,
-    run_db_check,
     schema_report,
     schema_sections,
     verify_schema,
 )
+from wechat_agent.tools.db_check import run_db_check
 
 
 @pytest.fixture()

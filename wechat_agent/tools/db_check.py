@@ -1,11 +1,4 @@
-"""应用层 db-check CLI；双库引擎已上提至 ``vrpa.memory.db``（M0-F-05）。
-
-本模块只保留：
-    - 应用侧 CLI 参数解析与配置解析（wechat_agent 专属）；
-    - 引擎 API 的再导出，保持历史 import 路径可用。
-
-新代码请直接 ``from vrpa.memory.db import ...``。
-"""
+"""应用层 db-check CLI（M0-F-06：从 memory/db.py 迁出，引擎在 vrpa.memory.db）。"""
 
 from __future__ import annotations
 
@@ -14,24 +7,9 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-from vrpa.memory.db import (  # noqa: F401 - re-export 引擎 API
-    DB_FILES,
-    DB_KINDS,
-    REQUIRED_INDEXES,
-    REQUIRED_TABLES,
-    SCHEMA_FILE,
-    SCHEMA_VERSION,
-    Databases,
-    backup_database,
-    connect,
-    init_databases,
-    migrate,
-    render_schema_report,
-    repair_databases,
-    schema_report,
-    schema_sections,
-    verify_schema,
-)
+from vrpa.memory.db import init_databases, render_schema_report, repair_databases, schema_report
+
+__all__ = ["run_db_check"]
 
 _ALLOWED_FLAGS = ("--schema", "--repair", "--json")
 

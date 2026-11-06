@@ -14,7 +14,7 @@ from typing import Any
 import pytest
 import yaml
 
-from vrpa.config.env import get_env, warn_legacy_env
+from vrpa.config.env import get_env
 from vrpa.config.loader import (
     SCHEMA_VERSION,
     check_schema,
@@ -36,29 +36,15 @@ def _write_yaml(tmp_path: Path, data: dict[str, Any]) -> Path:
 
 
 # ---------------------------------------------------------------- env
-def test_get_env_primary_wins(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("VRPA_CONFIG", "new.yaml")
-    monkeypatch.setenv("WECHAT_AGENT_CONFIG", "legacy.yaml")
-    assert get_env("VRPA_CONFIG", ("WECHAT_AGENT_CONFIG",)) == "new.yaml"
-
-
-def test_get_env_legacy_warns(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("VRPA_CONFIG", raising=False)
-    monkeypatch.setenv("WECHAT_AGENT_CONFIG", "legacy.yaml")
-    with pytest.warns(DeprecationWarning, match="WECHAT_AGENT_CONFIG"):
-        assert get_env("VRPA_CONFIG", ("WECHAT_AGENT_CONFIG",)) == "legacy.yaml"
+def test_get_env_reads_value(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("VRPA_CONFIG", "custom.yaml")
+    assert get_env("VRPA_CONFIG") == "custom.yaml"
 
 
 def test_get_env_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("VRPA_CONFIG", raising=False)
-    monkeypatch.delenv("WECHAT_AGENT_CONFIG", raising=False)
-    assert get_env("VRPA_CONFIG", ("WECHAT_AGENT_CONFIG",)) is None
-    assert get_env("VRPA_CONFIG", ("WECHAT_AGENT_CONFIG",), default="x.yaml") == "x.yaml"
-
-
-def test_warn_legacy_env_message() -> None:
-    with pytest.warns(DeprecationWarning, match="已弃用"):
-        warn_legacy_env("OLD_NAME", "NEW_NAME")
+    assert get_env("VRPA_CONFIG") is None
+    assert get_env("VRPA_CONFIG", default="x.yaml") == "x.yaml"
 
 
 # ---------------------------------------------------------------- schema / upgrade
