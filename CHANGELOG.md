@@ -126,8 +126,17 @@
   - 测试隔离：`tests/conftest.py` 全局清除 API Key；网络/重试/裁剪全部 Fake HTTP
   - 测试：455 passed / 87.84%
 
+### Added
+- M6 执行层与控制台（M6-01 ~ M6-06）：
+  - `wechat_agent/act/executor.py`：发送前三重校验（内容/目标/回读）+ `allow_real_send` 显式授权；dry_run 永不触碰键鼠
+  - `wechat_agent/control/console.py`：完整指令集 + 中文 NLU 路由（暂停/恢复/停止/状态/发送/接管/知识/插件/退出）
+  - `vrpa/runtime/recovery.py`：失败快照、崩溃恢复、僵尸任务重置、安全模式
+  - `vrpa/plugins/` + `wechat_agent/plugins/moments.py`：插件协议、故障隔离、朋友圈定时草稿示例
+  - `report` / `soak` / `acceptance` / `send` / `plugin` 命令；`doctor` 仍为 M0-07 待交付
+  - 测试：505 passed / 88.29%；所有发送路径默认 dry_run，无真实键鼠
+
 ### Planned
-- M0 ~ M5 已完成；下一步 M6（执行层、控制台与正式运行）待主控官立项
+- M0 ~ M6 已完成；后续为真机验收与 GUI 托盘接入（doctor 环境体检仍待 M0-07）
 - M0-07：环境体检 `doctor`
 - M0-08：控制台骨架
 - M0-09：红线自检 `selftest --redlines`

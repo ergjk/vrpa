@@ -1,14 +1,18 @@
-"""微信执行层：``vrpa.ports.Executor`` 实现（M0-F-05 接线；真实发送在 M6 落地）。
+"""执行层：真实发送前三重校验（M6-01，应用层）。
 
-当前阶段：
-    - ``dry_run`` 时直接返回 ``SendOutcome(stage="dry_run")``，不触碰键鼠；
-    - 非 dry_run 一律抛 ``VerifyFailed``（M6 之前绝不真实发送）；
-    - 三重校验（会话 / 焦点 / 内容）在 M6 实现。
+三道防线（任一失败抛 ``VerifyFailed``，绝不发送）：
+    1. 内容校验：非空、无 NUL、长度不超过安全上限、不含敏感词；
+    2. 目标校验：窗口存在且已置前（真实发送） / 安全开关已显式授权；
+    3. 发送后回读校验：会话采集文本必须包含刚发出的内容。
+
+``dry_run`` 永远不触碰键鼠；真实发送还额外要求 ``allow_real_send=True``。
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import time
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
 from vrpa.errors import VerifyFailed
 from vrpa.ports import SendOutcome
@@ -16,20 +20,102 @@ from vrpa.ports import SendOutcome
 if TYPE_CHECKING:  # pragma: no cover
     from wechat_agent.core.config import Config
 
+__all__ = ["SendChecks", "WeChatExecutor"]
+
+
+@dataclass(frozen=True)
+class SendChecks:
+    """三重校验结果（可审计）。"""
+
+    content_ok: bool
+    target_ok: bool
+    verify_ok: bool
+    issues: tuple[str, ...] = ()
+
+    @property
+    def passed(self) -> bool:
+        return self.content_ok and self.target_ok and self.verify_ok and not self.issues
+
 
 class WeChatExecutor:
-    """微信发送执行器（干跑可用，真实发送 M6）。"""
+    """发送执行器：dry_run 安全隔离 + 三重校验。"""
 
-    def __init__(self, config: Config) -> None:
+    def __init__(
+        self,
+        config: Config,
+        *,
+        window: Any | None = None,
+        driver: Any | None = None,
+        capture: Any | None = None,
+        allow_real_send: bool = False,
+        sleep: Any = time.sleep,
+    ) -> None:
         self._config = config
+        self._window = window
+        self._driver = driver
+        self._capture = capture
+        self._allow_real_send = allow_real_send
+        self._sleep = sleep
+        self.checks: SendChecks | None = None
 
-    def send(self, session: str, text: str, *, trigger: str = "auto") -> SendOutcome:
-        if self._config.app.dry_run:
-            return SendOutcome(ok=True, stage="dry_run", detail=text)
-        raise VerifyFailed(f"M6 未实现：真实发送必须完成三重校验（session={session!r}, trigger={trigger!r}）")
+    # ------------------------------------------------------------ 查询
+    def is_dry_run(self) -> bool:
+        return bool(self._config.app.dry_run)
 
     def clear_input(self) -> str:
         return ""
 
-    def is_dry_run(self) -> bool:
-        return self._config.app.dry_run
+    def validate(self, session: str, text: str) -> SendChecks:
+        """只做静态内容校验（dry-run/控制台预检可用）。"""
+        issues = self._content_issues(text)
+        target_ok = self.is_dry_run() or (self._window is not None and self._driver is not None)
+        if not session.strip():
+            issues.append("目标会话为空")
+        return SendChecks(
+            content_ok=not issues,
+            target_ok=target_ok,
+            verify_ok=self.is_dry_run() or self._capture is not None,
+            issues=tuple(issues),
+        )
+
+    # ------------------------------------------------------------ 发送
+    def send(self, session: str, text: str, *, trigger: str = "auto") -> SendOutcome:
+        self.checks = self.validate(session, text)
+        if self.checks.issues:
+            raise VerifyFailed("内容校验失败：" + "；".join(self.checks.issues))
+        if self.is_dry_run():
+            return SendOutcome(ok=True, stage="dry_run", detail=f"checks=content,target,verify trigger={trigger}")
+        if not self._allow_real_send:
+            raise VerifyFailed(
+                "真实发送被安全开关拒绝：allow_real_send=False（dry_run=false 必须显式授权并完成真机验收）"
+            )
+        if self._window is None or self._driver is None or self._capture is None:
+            raise VerifyFailed("目标校验失败：真实发送缺少 window/driver/capture 依赖")
+        try:
+            self._window.ensure_foreground()
+        except Exception as exc:  # noqa: BLE001 - 统一转换为校验失败
+            raise VerifyFailed(f"目标校验失败：{exc}") from exc
+        self._driver.clipboard_set(text)
+        self._driver.hotkey("ctrl", "v")
+        self._driver.hotkey("enter")
+        self._sleep(0.4)
+        observed = str(self._capture(session))
+        if text.strip() not in observed:
+            raise VerifyFailed(f"回读校验失败：发送后在会话 {session!r} 未观察到内容")
+        return SendOutcome(ok=True, stage="sent", detail=text)
+
+    # ------------------------------------------------------------ 内部
+    def _content_issues(self, text: str) -> list[str]:
+        issues: list[str] = []
+        if not isinstance(text, str) or not text.strip():
+            issues.append("内容为空")
+            return issues
+        if "\x00" in text:
+            issues.append("内容含控制字符")
+        limit = int(self._config.safety.max_reply_chars)
+        if len(text) > limit:
+            issues.append(f"内容长度 {len(text)} 超过上限 {limit}")
+        sensitive = [word for word in self._config.safety.sensitive_words if word and word in text]
+        if sensitive:
+            issues.append(f"内容含敏感词：{', '.join(sensitive)}")
+        return issues

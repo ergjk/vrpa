@@ -55,10 +55,12 @@ _COMMAND_SPECS = (
     ("replay", "离线回放 parser / dedup / flow 场景", "M3-07", int(ExitCode.USAGE)),
     ("db-check", "双库结构与迁移检查", "M0-06", int(ExitCode.USAGE)),
     ("llm-ping", "LLM 连通性检查（GET /models）", "M5-05", int(ExitCode.USAGE)),
-    ("run", "主进程（--simulate 全链路；真实运行待 M6）", "M4-05/06", int(ExitCode.USAGE)),
+    ("run", "主进程（--simulate 全链路；真实运行需真机验收）", "M4-05/06", int(ExitCode.USAGE)),
     ("send", "控制台接管发送（等价 /say）", "M6-01", int(ExitCode.USAGE)),
-    ("plugin", "插件管理（list / run）", "M6-04", int(ExitCode.USAGE)),
-    ("report", "浸泡/验收报告判定", "M6-05", int(ExitCode.USAGE)),
+    ("plugin", "插件管理（list / plan，dry_run）", "M6-04", int(ExitCode.USAGE)),
+    ("report", "运行报告（双库只读统计）", "M6-05", int(ExitCode.USAGE)),
+    ("soak", "浸泡测试（--simulate，纯 Fake）", "M6-05", int(ExitCode.USAGE)),
+    ("acceptance", "生成真机验收清单（只读）", "M6-06", int(ExitCode.USAGE)),
 )
 
 COMMANDS: dict[str, Command] = {
@@ -141,6 +143,41 @@ def _cmd_locate(argv: Sequence[str]) -> int:
     from wechat_agent.tools.locate import run_locate
 
     return run_locate(argv)
+
+
+def _cmd_send(argv: Sequence[str]) -> int:
+    """M6-01：控制台发送（默认 dry_run）。"""
+    from wechat_agent.tools.send import run_send
+
+    return run_send(argv)
+
+
+def _cmd_plugin(argv: Sequence[str]) -> int:
+    """M6-04：插件管理（list / plan）。"""
+    from wechat_agent.tools.plugin import run_plugin
+
+    return run_plugin(argv)
+
+
+def _cmd_report(argv: Sequence[str]) -> int:
+    """M6-05：运行报告（只读）。"""
+    from wechat_agent.tools.report import run_report
+
+    return run_report(argv)
+
+
+def _cmd_soak(argv: Sequence[str]) -> int:
+    """M6-05：浸泡测试（纯 Fake）。"""
+    from wechat_agent.tools.soak import run_soak
+
+    return run_soak(argv)
+
+
+def _cmd_acceptance(argv: Sequence[str]) -> int:
+    """M6-06：真机验收清单（只读）。"""
+    from wechat_agent.tools.acceptance import run_acceptance
+
+    return run_acceptance(argv)
 
 
 def _cmd_llm_ping(argv: Sequence[str]) -> int:
@@ -251,6 +288,11 @@ register_handler("probe", _cmd_probe)
 register_handler("replay", _cmd_replay)
 register_handler("run", _cmd_run)
 register_handler("llm-ping", _cmd_llm_ping)
+register_handler("send", _cmd_send)
+register_handler("plugin", _cmd_plugin)
+register_handler("report", _cmd_report)
+register_handler("soak", _cmd_soak)
+register_handler("acceptance", _cmd_acceptance)
 
 
 if __name__ == "__main__":

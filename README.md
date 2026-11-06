@@ -1,7 +1,7 @@
 # VRPA-WeChat-Agent
 
 > **VRPA（Vision RPA）通用 RPA 框架底座 + 微信参考实现** · MIT License
-> 状态：**M0 ~ M4 已完成 + M5 LLM 推理层已完成**（471 项测试全绿 · 覆盖率 88.02% · ruff / mypy strict 全绿）
+> 状态：**M0 ~ M6 全部阶段已完成**（505 项测试全绿 · 覆盖率 88.29% · ruff / mypy strict 全绿 · 默认 dry_run）
 > M4：队列/拟人延迟/限流/状态机熔断/`--simulate`/接管；M5：OpenAI 兼容客户端（重试+用量）、Prompt 预算裁剪、后处理安全过滤、人设热加载、`llm-ping`。
 
 ---
@@ -90,6 +90,8 @@ vrpa/                     # 通用框架底座（可独立发布/复用）
                           #   HistoryStore / 尾部去重 / 档案库 / 异步 job（M3）
   knowledge/             #   只读知识块 / Provider 协议 / 检索门面 / 文件热加载（M5-02）
   llm/                    #   client / prompt 预算 / postprocess / persona / policy（M5）
+  plugins/                #   插件协议与故障隔离管理器（M6-04）
+  runtime/                #   失败自保 / 崩溃恢复快照（M6-03）
   scheduling/             #   队列 / 拟人延迟 / 限流调度 / 状态机与熔断 / 编排循环（M4）
   vision/                 #   profile schema / 多尺度匹配 / 定位缓存 / 校准核心（M1）
                           #   窗口后端 / 输入驱动 / 校准包（M2 补充）
@@ -98,7 +100,7 @@ vrpa/                     # 通用框架底座（可独立发布/复用）
   ports.py                #   五端口协议 + 跨层 DTO（M0-F-04）
   platform.py             #   PlatformAdapter 协议 + AdapterRegistry（M0-F-04）
   testing/                #   Fakes + contracts 合规测试套件（M0-F-04）
-tests/                    # 471 项测试（配置/日志/异常/接口/双库/CLI/端口/契约/兼容 shim）
+tests/                    # 505 项测试（配置/日志/异常/接口/双库/CLI/端口/契约/兼容 shim）
 docs/                     # 技术方案、行动清单、架构、ADR、适配器指南
 scripts/quality.ps1|.bat  # 一键质量门禁（ruff + mypy strict + pytest + coverage）
 wechat_agent/             # 微信参考实现（六层模块见 §5.1）
@@ -108,7 +110,7 @@ wechat_agent/             # 微信参考实现（六层模块见 §5.1）
   memory/                 #   双库门面 shim + Config 薄适配（引擎已上提 vrpa.memory）
   perception/             #   ProfileElementTree 绑定 + 剪贴板采集 Perception（M1-M2）
   brain/ act/             #   推理 Brain（M5）；执行 Executor（M6，干跑已可用）
-  control/ plugins/ tools/  #   控制台（M6）；插件（M6）；calibrate / locate / validate-tree / probe / replay / run / llm-ping / db-check 工具
+  control/ plugins/ tools/  #   控制台（M6）；插件（M6）；calibrate / locate / validate-tree / probe / replay / run / llm-ping / send / plugin / report / soak / acceptance / db-check 工具
   personas/               #   人设文件（mtime 变化自动热加载，M5-04）
   data/knowledge/         #   静态只读知识（global/ 与 chats/<chat_id>/，绝不写入记忆库）
   perception/             #   ElementTree / 窗口 / 会话切换 / 采集 / 解析器（M1-M2）
@@ -184,6 +186,10 @@ python -m wechat_agent probe --text 样例.txt --json    # 离线解析诊断
 python -m wechat_agent replay --scenario tests/fixtures/dedup_scenarios/01_basic_overlap.json  # 去重回放
 python -m wechat_agent run --simulate --scenario tests/fixtures/simulation/01_basic_flow.json   # 全链路 dry-run 模拟
 python -m wechat_agent llm-ping                # LLM 连通性（需 DEEPSEEK_API_KEY）
+python -m wechat_agent send --chat 张三 --text 你好   # 控制台发送（默认 dry_run）
+python -m wechat_agent report                  # 运行报告（只读）
+python -m wechat_agent soak --iterations 5     # 浸泡测试（simulate，纯 Fake）
+python -m wechat_agent acceptance              # 生成真机验收清单
 
 # 4.1) 分享/复用校准包（可选）
 python -m wechat_agent calibrate --export ./share/wechat-1280x720@1      # 导出
@@ -228,7 +234,7 @@ python -m wechat_agent run                     # M6（正式运行，建议先�
 
 ```powershell
 .\scripts\quality.bat          # 一键：ruff check → ruff format → mypy strict → pytest+coverage
-python -m pytest tests -q     # 单元测试（当前 471 passed）
+python -m pytest tests -q     # 单元测试（当前 505 passed）
 python -m mypy                # vrpa 框架包 strict
 ```
 
@@ -237,8 +243,8 @@ python -m mypy                # vrpa 框架包 strict
 | 静态检查 | ruff（E/F/I/UP/B/SIM） | 全绿 |
 | 格式 | ruff format | 全绿 |
 | 类型 | mypy strict（`vrpa`） | 0 error |
-| 测试 | pytest | 471 passed |
-| 覆盖率 | pytest-cov | 88.02%（门禁 ≥85%） |
+| 测试 | pytest | 505 passed |
+| 覆盖率 | pytest-cov | 88.29%（门禁 ≥85%） |
 | 一键 | `scripts\quality.bat` | `QUALITY GATE: PASS` |
 
 ---

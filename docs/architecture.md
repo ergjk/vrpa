@@ -40,6 +40,8 @@ vrpa/                       # 框架底座（可独立发布为 vrpa）
 ├── scheduling/                #   queue / delay / scheduler / machine / loop（M4）
 ├── knowledge/                 #   KnowledgeProvider / 检索门面 / 文件热加载（M5-02）
 ├── llm/                       #   client / prompt / postprocess / persona / policy（M5）
+├── plugins/                   #   Plugin 协议 / 故障隔离管理器（M6）
+├── runtime/                   #   失败自保 / 崩溃恢复（M6）
 ├── cli.py                     #   通用 CLI 骨架（注册表/退出码/异常兜底/帮助）
 └── testing/
     ├── fakes.py               #   Fake 全套（M4 全链路依赖）
@@ -138,6 +140,12 @@ wechat_agent/                  # 微信应用 + 微信适配器
 | M5-03（已完成） | 后处理与安全 | 去 Markdown/链接、敏感词打码、按 `max_reply_chars` 截断 |
 | M5-04（已完成） | 人设热加载 | `PersonaLoader` 按 mtime 自动重载，读取失败保留旧版本 |
 | M5-05（已完成） | llm-ping 与集成 | `llm-ping` CLI + `WeChatBrain` 真实链路（FakeTransport 测试，零真实 API） |
+| M6-01（已完成） | 执行层三重校验 | 内容/目标/回读三道防线；dry_run 默认、真实发送需显式授权 |
+| M6-02（已完成） | 控制台与 NLU | 指令集 + 中文自然语言路由（暂停/恢复/状态/发送/接管/知识/插件） |
+| M6-03（已完成） | 失败自保与恢复 | 熔断快照、崩溃恢复、僵尸任务重置、安全模式 |
+| M6-04（已完成） | 插件与 moments | `Plugin` 协议 + 故障隔离管理器 + 朋友圈定时草稿示例 |
+| M6-05（已完成） | 报告与浸泡 | `report` 只读统计 + `soak` 纯 Fake 浸泡测试 |
+| M6-06（已完成） | 真机验收清单 | `acceptance` 生成只读检查 + 人工步骤清单 |
 
 ## 8. 与 V1.0 功能里程碑的关系
 
