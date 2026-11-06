@@ -40,7 +40,7 @@ def test_unknown_subcommand(capsys: pytest.CaptureFixture[str]) -> None:
 
 
 def test_unimplemented_subcommand_exit_code(capsys: pytest.CaptureFixture[str]) -> None:
-    assert main_module.main(["run"]) == 2
+    assert main_module.main(["send"]) == 2
     err = capsys.readouterr().err
     assert "尚未实现" in err
 

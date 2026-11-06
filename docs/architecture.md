@@ -37,6 +37,7 @@ vrpa/                       # 框架底座（可独立发布为 vrpa）
 ├── vision/                    #   profile / 匹配 / 定位 / 校准 / 窗口 / 驱动 / 校准包（M1-M2）
 ├── parsing/                   #   解析策略分发器（M2）
 ├── memory/                    #   history / dedup / long_term / jobs（M3）
+├── scheduling/                #   queue / delay / scheduler / machine / loop（M4）
 ├── cli.py                     #   通用 CLI 骨架（注册表/退出码/异常兜底/帮助）
 └── testing/
     ├── fakes.py               #   Fake 全套（M4 全链路依赖）
@@ -124,6 +125,12 @@ wechat_agent/                  # 微信应用 + 微信适配器
 | M3-05（已完成） | 档案库 long_term.py | `vrpa.memory.long_term`：规则提取 + 幂等 upsert + 召回/忘记 |
 | M3-06（已完成） | 长期记忆提炼异步 job | `vrpa.memory.jobs`：tasks 持久队列、claim/complete/fail 重试 |
 | M3-07（已完成） | 去重离线回放与 golden | `replay` CLI + 7 份场景 golden（临时库回放，不污染 data/） |
+| M4-01（已完成） | 优先级队列 | `vrpa.scheduling.queue`：优先级 + FIFO + 按会话阻塞 |
+| M4-02（已完成） | 拟人化延迟 | `vrpa.scheduling.delay`：可注入 rng / 可打断 Event.wait / 上限钳制 |
+| M4-03（已完成） | 调度器 | 限流（分钟/天/全局）、静默时段、冷却、跨会话轮转 |
+| M4-04（已完成） | 状态机与熔断 | run 状态机 + 连续失败熔断（open/half-open/closed）、熔断自动暂停 |
+| M4-05（已完成） | Fake 后端与 --simulate | `run --simulate` 全链路（Fake 后端 + dry_run，零真实键鼠） |
+| M4-06（已完成） | 打断与接管通道 | `ControlChannel`：pause/resume/stop/takeover；拟人等待可立即打断 |
 
 ## 8. 与 V1.0 功能里程碑的关系
 

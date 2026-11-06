@@ -1,0 +1,41 @@
+{
+  "chats": [
+    "张三"
+  ],
+  "captures": {
+    "张三": [
+      "10:00 张三: 你好",
+      "",
+      ""
+    ]
+  },
+  "replies": {
+    "张三": [
+      "自动回复"
+    ]
+  },
+  "ticks": 4,
+  "control": [
+    {
+      "tick": 1,
+      "action": "pause"
+    },
+    {
+      "tick": 2,
+      "action": "resume"
+    },
+    {
+      "tick": 3,
+      "action": "takeover",
+      "chat": "张三",
+      "text": "手动接管"
+    },
+    {
+      "tick": 4,
+      "action": "stop"
+    }
+  ],
+  "expected": {
+    "state": "stopped"
+  }
+}

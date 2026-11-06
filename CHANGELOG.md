@@ -100,8 +100,19 @@
   - `wechat_agent/tools/replay.py` + 7 份去重回放场景 golden（临时库回放，不污染 data/）
   - 测试：memory history / dedup / long_term / jobs / pipeline / replay；372 passed / 87.46%
 
+### Added
+- M4 编排调度（M4-01 ~ M4-06）：
+  - `vrpa/scheduling/queue.py`：优先级 / FIFO / 按会话阻塞
+  - `vrpa/scheduling/delay.py`：拟人延迟（可注入 rng、可打断 Event.wait、上限钳制）
+  - `vrpa/scheduling/scheduler.py`：限流（分钟/天/全局）、静默时段、冷却、跨会话轮转
+  - `vrpa/scheduling/machine.py`：运行状态机 + 连续失败熔断（open/half-open/closed）
+  - `vrpa/scheduling/loop.py`：编排循环（采集->入库->排队->拟人->发送->回写）+ 控制通道（pause/resume/stop/takeover）
+  - `wechat_agent/tools/run.py`：`run --simulate` 全链路（Fake 后端 + dry_run，零真实键鼠）
+  - 场景：`tests/fixtures/simulation/`（基础流程 / 重复守卫 / 暂停接管 / 熔断）
+  - 测试：队列 / 延迟 / 调度 / 状态机 / 编排 / simulate；414 passed / 87.77%
+
 ### Planned
-- M3 已完成；下一步 M4（轮询编排、队列/拟人延迟、dry-run）待主控官立项
+- M0 ~ M4 已完成；下一步 M5（LLM 推理层与 Prompt 预算）待主控官立项
 - M0-07：环境体检 `doctor`
 - M0-08：控制台骨架
 - M0-09：红线自检 `selftest --redlines`

@@ -1,0 +1,16 @@
+{
+  "chats": [
+    "张三"
+  ],
+  "captures": {
+    "张三": []
+  },
+  "capture_failures": 3,
+  "replies": {},
+  "ticks": 3,
+  "expected": {
+    "state": "paused",
+    "breaker": "open",
+    "failures": 3
+  }
+}
