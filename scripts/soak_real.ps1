@@ -25,6 +25,30 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+function Invoke-PythonProcess {
+    param([string]$FilePath, [string[]]$Arguments)
+    $quoted = foreach ($arg in $Arguments) {
+        if ($arg -match '[\s"]') { '"' + ($arg -replace '"', '\"') + '"' } else { $arg }
+    }
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = $FilePath
+    $psi.Arguments = ($quoted -join ' ')
+    $psi.UseShellExecute = $false
+    $psi.CreateNoWindow = $true
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardError = $true
+    $psi.StandardOutputEncoding = [System.Text.Encoding]::UTF8
+    $psi.StandardErrorEncoding = [System.Text.Encoding]::UTF8
+    $proc = New-Object System.Diagnostics.Process
+    $proc.StartInfo = $psi
+    [void]$proc.Start()
+    $stdout = $proc.StandardOutput.ReadToEnd()
+    $stderr = $proc.StandardError.ReadToEnd()
+    $proc.WaitForExit()
+    return [pscustomobject]@{ ExitCode = $proc.ExitCode; StdOut = $stdout; StdErr = $stderr }
+}
+
 $root = Split-Path -Parent $PSScriptRoot
 
 if (-not $Python) {
@@ -72,8 +96,12 @@ for ($i = 1; $i -le $Iterations; $i++) {
         continue
     }
 
-    $out = (& $Python @runArgs 2>> $stderrLog) | Out-String
-    $exitCode = $LASTEXITCODE
+    $proc = Invoke-PythonProcess -FilePath $Python -Arguments $runArgs
+    $out = $proc.StdOut
+    $exitCode = $proc.ExitCode
+    if ($proc.StdErr) {
+        Add-Content -Path $stderrLog -Value $proc.StdErr -Encoding UTF8
+    }
     $trimmed = $out.Trim()
     try {
         if (-not $trimmed) { throw "空输出" }
