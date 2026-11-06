@@ -28,6 +28,7 @@ from vrpa.ports import (
     Rect,
     SendOutcome,
 )
+from vrpa.vision.window import WindowInfo
 
 __all__ = [
     "FakeBrain",
@@ -38,24 +39,39 @@ __all__ = [
     "FakePerception",
     "FakePlatformAdapter",
     "FakePlatformOptions",
+    "FakeDriver",
+    "FakeWindowBackend",
     "make_fake_ports",
 ]
 
 
 class FakeElementTree:
-    """内存元素树：默认返回固定矩形；``fail_locate=True`` 时模拟定位失败。"""
+    """内存元素树：默认返回固定矩形；可注入 ``element_rects`` 按 id 指定矩形。"""
 
-    def __init__(self, *, fail_locate: bool = False, rect: Rect | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        fail_locate: bool = False,
+        rect: Rect | None = None,
+        element_rects: Mapping[str, Rect] | None = None,
+    ) -> None:
         self.fail_locate = fail_locate
         self._rect = rect or Rect(10, 20, 100, 40)
+        self._element_rects = dict(element_rects) if element_rects is not None else None
         self.invalidated = 0
 
     def element_ids(self) -> tuple[str, ...]:
+        if self._element_rects is not None:
+            return tuple(self._element_rects)
         return ("main_window", "message_area", "input_box")
 
     def locate(self, element_id: str) -> Rect:
         if self.fail_locate:
             raise ElementNotVisible(f"fake: 元素不可见 {element_id}")
+        if self._element_rects is not None:
+            if element_id not in self._element_rects:
+                raise ElementNotVisible(f"fake: 未定义元素 {element_id}")
+            return self._element_rects[element_id]
         return self._rect
 
     def validate(self) -> bool:
@@ -193,6 +209,71 @@ class FakeMemoryStore:
         hit = len(remaining) != len(self.memories)
         self.memories = remaining
         return hit
+
+
+class FakeWindowBackend:
+    """窗口后端替身：固定返回一个 WindowInfo，可模拟前台激活。"""
+
+    def __init__(self, info: WindowInfo | None, *, foreground: bool = True) -> None:
+        self._info = info
+        self._foreground = foreground
+        self.activated: list[int] = []
+        self.find_calls: list[tuple[str, tuple[str, ...]]] = []
+
+    def find(self, *, title_regex: str, process_names: Sequence[str]) -> WindowInfo | None:
+        self.find_calls.append((title_regex, tuple(process_names)))
+        return self._info
+
+    def activate(self, hwnd: int) -> None:
+        self.activated.append(hwnd)
+        self._foreground = True
+
+    def is_foreground(self, hwnd: int) -> bool:
+        return self._foreground and self._info is not None and self._info.hwnd == hwnd
+
+
+class FakeDriver:
+    """输入驱动替身：记录 click/drag/hotkey，剪贴板可脚本化返回。"""
+
+    def __init__(self, *, clipboard: str = "", scripted: Sequence[str] = ()) -> None:
+        self.clipboard_text = clipboard
+        self._scripted = tuple(scripted)
+        self._index = 0
+        self.clicks: list[tuple[int, int]] = []
+        self.drags: list[tuple[tuple[int, int], tuple[int, int], int, float]] = []
+        self.hotkeys: list[tuple[str, ...]] = []
+        self.typed: list[str] = []
+        self.clipboard_sets: list[str] = []
+
+    def click(self, x: int, y: int) -> None:
+        self.clicks.append((x, y))
+
+    def drag(
+        self,
+        start: tuple[int, int],
+        end: tuple[int, int],
+        *,
+        steps: int = 18,
+        duration: float = 0.45,
+    ) -> None:
+        self.drags.append((start, end, steps, duration))
+
+    def hotkey(self, *keys: str) -> None:
+        self.hotkeys.append(tuple(keys))
+
+    def type_text(self, text: str) -> None:
+        self.typed.append(text)
+
+    def clipboard_get(self) -> str:
+        if not self._scripted:
+            return self.clipboard_text
+        index = min(self._index, len(self._scripted) - 1)
+        self._index += 1
+        return self._scripted[index]
+
+    def clipboard_set(self, text: str) -> None:
+        self.clipboard_text = text
+        self.clipboard_sets.append(text)
 
 
 @dataclass(frozen=True)

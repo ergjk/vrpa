@@ -1,0 +1,158 @@
+{
+  "01_sender_basic": [
+    {
+      "content": "你好",
+      "sender": "张三",
+      "ts": null,
+      "strategy": "sender_colon"
+    },
+    {
+      "content": "在吗",
+      "sender": "李四",
+      "ts": null,
+      "strategy": "sender_colon"
+    }
+  ],
+  "02_timestamp_short": [
+    {
+      "content": "早上好",
+      "sender": "张三",
+      "ts": "10:23",
+      "strategy": "timestamp_prefix"
+    },
+    {
+      "content": "早",
+      "sender": "李四",
+      "ts": "10:24",
+      "strategy": "timestamp_prefix"
+    }
+  ],
+  "03_timestamp_full": [
+    {
+      "content": "明天见",
+      "sender": "张三",
+      "ts": "2026-11-06 10:23:05",
+      "strategy": "timestamp_prefix"
+    }
+  ],
+  "04_group_mixed": [
+    {
+      "content": "大家好",
+      "sender": "王五",
+      "ts": "10:00",
+      "strategy": "timestamp_prefix"
+    },
+    {
+      "content": "你好",
+      "sender": "赵六",
+      "ts": "10:01",
+      "strategy": "timestamp_prefix"
+    }
+  ],
+  "05_multiline_message": [
+    {
+      "content": "第一行\n第二行\n第三行",
+      "sender": "张三",
+      "ts": "10:00",
+      "strategy": "timestamp_prefix"
+    }
+  ],
+  "06_multiline_then_sender": [
+    {
+      "content": "主题\n- 要点1",
+      "sender": "张三",
+      "ts": "10:00",
+      "strategy": "timestamp_prefix"
+    },
+    {
+      "content": "收到",
+      "sender": "李四",
+      "ts": "10:01",
+      "strategy": "timestamp_prefix"
+    }
+  ],
+  "07_fullwidth_colon": [
+    {
+      "content": "全角冒号",
+      "sender": "张三",
+      "ts": null,
+      "strategy": "sender_colon"
+    }
+  ],
+  "08_mixed_timestamp": [
+    {
+      "content": "a",
+      "sender": "张三",
+      "ts": "10:00",
+      "strategy": "timestamp_prefix"
+    },
+    {
+      "content": "b",
+      "sender": "李四",
+      "ts": "2026-11-06 10:01:00",
+      "strategy": "timestamp_prefix"
+    }
+  ],
+  "09_system_hint": [
+    {
+      "content": "你已加入群聊",
+      "sender": "系统提示",
+      "ts": "10:00",
+      "strategy": "timestamp_prefix"
+    }
+  ],
+  "10_url_content": [
+    {
+      "content": "https://example.com/a:b",
+      "sender": "张三",
+      "ts": "10:00",
+      "strategy": "timestamp_prefix"
+    }
+  ],
+  "11_sender_with_space": [
+    {
+      "content": "hi",
+      "sender": "小王 同学",
+      "ts": "10:00",
+      "strategy": "timestamp_prefix"
+    }
+  ],
+  "12_quote_colons": [
+    {
+      "content": "他说：你好",
+      "sender": "张三",
+      "ts": "10:00",
+      "strategy": "timestamp_prefix"
+    }
+  ],
+  "13_phone_like_sender": [
+    {
+      "content": "手机号文本",
+      "sender": "138xxxx",
+      "ts": "10:00",
+      "strategy": "timestamp_prefix"
+    }
+  ],
+  "14_order_timestamp_wins": [
+    {
+      "content": "早上好",
+      "sender": "张三",
+      "ts": "10:00",
+      "strategy": "timestamp_prefix"
+    }
+  ],
+  "15_long_multiline": [
+    {
+      "content": "公告\n第一段\n第二段",
+      "sender": "群助手",
+      "ts": "2026-11-06 09:00:00",
+      "strategy": "timestamp_prefix"
+    },
+    {
+      "content": "收到",
+      "sender": "张三",
+      "ts": "2026-11-06 09:05:00",
+      "strategy": "timestamp_prefix"
+    }
+  ]
+}

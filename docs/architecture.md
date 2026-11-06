@@ -34,7 +34,8 @@ vrpa/                       # 框架底座（可独立发布为 vrpa）
 ├── platform.py                #   PlatformAdapter 协议 + AdapterRegistry + 能力声明
 ├── element_tree.py            #   通用 profile 元素树（严格失败语义，M0-F-05）
 ├── memory/                    #   双库引擎：DDL/迁移/备份/自检 + SQLite MemoryStore（M0-F-05）
-├── vision/                    #   profile schema / 多尺度匹配 / 定位器 / 校准核心（M1）
+├── vision/                    #   profile / 匹配 / 定位 / 校准 / 窗口 / 驱动 / 校准包（M1-M2）
+├── parsing/                   #   解析策略分发器（M2）
 ├── cli.py                     #   通用 CLI 骨架（注册表/退出码/异常兜底/帮助）
 └── testing/
     ├── fakes.py               #   Fake 全套（M4 全链路依赖）
@@ -66,8 +67,8 @@ wechat_agent/                  # 微信应用 + 微信适配器
 
 - 双库引擎（`vrpa/memory/db.py` + `schema.sql`）、`SQLiteMemoryStore`（`vrpa/memory/store.py`）、
   profile 元素树（`vrpa/element_tree.py`）已上提框架；`wechat_agent` 只保留「Config 绑定 + 微信字段」薄适配。
-- **解析策略分发（Strategy Dispatcher）**：策略执行器由 `vrpa` 在 M2 提供（`parser_pack` 目前仅声明策略名与
-  样例要求）；应用层不承载分发逻辑，也不允许按平台写分支。
+- **解析策略分发（Strategy Dispatcher）**：M2 已落地 `vrpa.parsing.StrategyDispatcher`；平台适配器仅提供
+  `parser_pack`（策略名 + 样例要求），应用层不承载分发逻辑、不写平台分支。
 - **配置通用段（M0-F-06）**：`app` / `uia_tree` / `capture` / `llm` / `humanize` / `ratelimit` / `safety` /
   `control` / `plugins` / `display` 与 `.env` 加载、显示器探测全部由 `vrpa.config.schema` 解析；
   `wechat_agent/core/config.py` 只保留 `platform.options` 插件校验、`Config` 聚合与 selftest。
@@ -109,6 +110,12 @@ wechat_agent/                  # 微信应用 + 微信适配器
 | M1-04（已完成） | calibrate 校准向导 | `vrpa.vision.calibration` + `wechat_agent/tools/calibrate.py`（交互/离线双模式） |
 | M1-05（已完成） | validate-tree 严格校验 | `wechat_agent/tools/validate_tree.py`：结构+现场定位、--image 离线、--json |
 | M1-06（已完成） | 定位性能与缓存测试 | 缓存命中零截屏、TTL 失效、50 次缓存定位 < 1s |
+| M2-01（已完成） | 顶层窗口与客户端矩形 | `vrpa.vision.window`：WindowBackend 协议 + pywinauto 实现 + Fake；客户端矩形 |
+| M2-02（已完成） | 切会话 ensure_chat | `wechat_agent.perception.session`：搜索框点击/粘贴/回车/标题校验 |
+| M2-03（已完成） | 框选采集 capture | 框选比例来自配置、Ctrl+C、剪贴板恢复、空剪贴板 CopyFailed |
+| M2-04（已完成） | 解析器与样例库 | `vrpa.parsing.StrategyDispatcher` + 微信三策略 + 15 份 golden 样例 |
+| M2-05（已完成） | probe 采集诊断 | `probe --text/--chat --json`，只读不落库不回复 |
+| M2-06（已完成） | R3 边界红线静态测试 | 消息路径禁用 cv2/OCR/模板匹配；解析器只接受文本 |
 
 ## 8. 与 V1.0 功能里程碑的关系
 

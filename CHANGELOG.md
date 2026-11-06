@@ -77,8 +77,21 @@
   - 新增 `docs/calibration-package.md`：包结构、必需文件、导出/导入、外部路径与兼容性说明
   - 测试：profile / matcher / locator / calibration / CLI 离线链路 + 缓存性能 + 校准包；268 passed / 88.38%
 
+### Added
+- M2 框选 + Ctrl+C 采集与解析（M2-01 ~ M2-06）：
+  - `vrpa/vision/window.py`：WindowBackend 协议 + pywinauto 实现（标题正则/进程名/客户端矩形/前台校验）
+  - `vrpa/vision/driver.py`：Driver 协议 + pyautogui/pyperclip 实现（click/drag/hotkey/clipboard）
+  - `vrpa/parsing/`：`StrategyDispatcher` + `ParsedMessage`/`ParseResult`（解析执行器归框架）
+  - `wechat_agent/perception/window.py` / `session.py` / `capture.py` / `parser.py`：窗口、ensure_chat、框选采集、三种解析策略
+  - `wechat_agent/tools/probe.py`：采集诊断（`--text` 离线 / `--chat` 真实，只读不落库不回复）
+  - 样例库：`tests/fixtures/parser_samples/`（15 份文本 + golden 期望）
+  - Fakes 扩展：`FakeWindowBackend` / `FakeDriver` / 按 id 指定矩形的 `FakeElementTree`（单测零物理环境依赖）
+  - R3 红线：`tests/test_boundary.py` 静态扫描消息路径禁止 cv2/OCR/模板匹配
+  - 契约套件：端口冒烟容忍 WindowNotFound/WindowNotForeground（无桌面环境仍可全绿）
+  - 测试：323 passed / 86.85%
+
 ### Planned
-- M1-01 ~ M1-06 已完成；下一步 M2（框选 + Ctrl+C 采集与解析）待主控官立项
+- M1 / M2 已完成；下一步 M3（去重对齐与记忆提炼）待主控官立项
 - M0-07：环境体检 `doctor`
 - M0-08：控制台骨架
 - M0-09：红线自检 `selftest --redlines`

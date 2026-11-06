@@ -1,8 +1,8 @@
 # VRPA-WeChat-Agent
 
 > **VRPA（Vision RPA）通用 RPA 框架底座 + 微信参考实现** · MIT License
-> 状态：**M0 框架底座 + M1 假 UIA 树与视觉定位已完成**（268 项测试全绿 · 覆盖率 88.38% · ruff / mypy strict 全绿）
-> M0-F-06：旧 shim 与 `WECHAT_AGENT_*` 环境变量已移除；M1-01~06：profile schema、多尺度锚点匹配、定位缓存、calibrate、validate-tree 全部交付。
+> 状态：**M0 框架底座 + M1 视觉定位 + M2 采集解析已完成**（323 项测试全绿 · 覆盖率 86.85% · ruff / mypy strict 全绿）
+> M1：profile / 多尺度匹配 / 定位缓存 / calibrate / validate-tree；M2：窗口矩形、会话切换、框选 + Ctrl+C 采集、解析策略与样例库、probe、R3 边界测试。
 
 ---
 
@@ -68,7 +68,7 @@
 | 能力 | 说明 | 状态 |
 |---|---|---|
 | 假 UIA 树视觉定位 | 微信 4.x 无原生控件树，自建 JSON 元素树 + 锚点图匹配定位点击目标（只服务"操作界面"） | 已实现 M1-01~06（calibrate / validate-tree / locate 可用） |
-| 剪贴板纯文本采集 | 消息流**唯一**来源：鼠标框选 + `Ctrl+C`，禁止对消息做图像识别（红线 R3） | 规划中 M2 |
+| 剪贴板纯文本采集 | 消息流**唯一**来源：鼠标框选 + `Ctrl+C`，禁止对消息做图像识别（红线 R3） | 已实现 M2-01~06（窗口/会话/采集/解析/probe） |
 | 状态回写去重 | 发送后立即以 `assistant` 写库；下轮抓屏按文本哈希去重；无前缀消息识别为主人多端发送，入库不回复 | 规划中 M3 |
 | LLM 推理 | Persona + 长期记忆 + 最近 N 轮上下文，Token 预算裁剪、输出清洗与安全过滤 | 规划中 M5 |
 | 发送三重校验 | 会话 / 焦点 / 内容三校验通过才回车；失败清空重试，绝不重发 | 规划中 M6 |
@@ -88,11 +88,13 @@ vrpa/                     # 通用框架底座（可独立发布/复用）
   element_tree.py         #   通用 profile 元素树（严格失败语义，M0-F-05）
   memory/                 #   双库引擎：schema.sql / 迁移 / 备份 / SQLite MemoryStore（M0-F-05）
   vision/                 #   profile schema / 多尺度匹配 / 定位缓存 / 校准核心（M1）
+                          #   窗口后端 / 输入驱动 / 校准包（M2 补充）
+  parsing/                #   解析策略分发器（StrategyDispatcher，M2-04）
   config/                 #   配置内核：env / validators / plugin / loader / schema（通用段）
   ports.py                #   五端口协议 + 跨层 DTO（M0-F-04）
   platform.py             #   PlatformAdapter 协议 + AdapterRegistry（M0-F-04）
   testing/                #   Fakes + contracts 合规测试套件（M0-F-04）
-tests/                    # 268 项测试（配置/日志/异常/接口/双库/CLI/端口/契约/兼容 shim）
+tests/                    # 323 项测试（配置/日志/异常/接口/双库/CLI/端口/契约/兼容 shim）
 docs/                     # 技术方案、行动清单、架构、ADR、适配器指南
 scripts/quality.ps1|.bat  # 一键质量门禁（ruff + mypy strict + pytest + coverage）
 wechat_agent/             # 微信参考实现（六层模块见 §5.1）
@@ -102,7 +104,8 @@ wechat_agent/             # 微信参考实现（六层模块见 §5.1）
   memory/                 #   双库门面 shim + Config 薄适配（引擎已上提 vrpa.memory）
   perception/             #   ProfileElementTree 绑定 + 剪贴板采集 Perception（M1-M2）
   brain/ act/             #   推理 Brain（M5）；执行 Executor（M6，干跑已可用）
-  control/ plugins/ tools/  #   控制台（M6）；插件（M6）；calibrate / locate / validate-tree / db-check 工具
+  control/ plugins/ tools/  #   控制台（M6）；插件（M6）；calibrate / locate / validate-tree / probe / db-check 工具
+  perception/             #   ElementTree / 窗口 / 会话切换 / 采集 / 解析器（M1-M2）
 ```
 
 ---
@@ -113,7 +116,7 @@ wechat_agent/             # 微信参考实现（六层模块见 §5.1）
 
 | 层 | 组件 | 职责 | 状态 |
 |---|---|---|---|
-| 感知层 | `pywinauto` + 假 UIA 树 + `pyperclip` | 定位界面元素、框选并复制消息文本 | 规划中 M1-M2（ElementTree / Capture 端口已接线，M0-F-05） |
+| 感知层 | `pywinauto` + 假 UIA 树 + `pyperclip` | 定位界面元素、框选并复制消息文本 | 已实现 M1-M2（ElementTree / 窗口 / 会话切换 / 采集） |
 | 记忆层 | SQLite 双库 + 去重对齐 | 流水去重、长期记忆提炼与召回 | 规划中 M3（双库 M0-06；MemoryStore 端口 M0-F-05 可用） |
 | 推理层 | DeepSeek / OpenAI 兼容 API | 上下文组装、回复生成与清洗 | 规划中 M5（Brain 端口已接线，M0-F-05） |
 | 执行层 | `pyautogui` + 三重校验 | 粘贴、校验、回车、状态回写 | 规划中 M6（Executor 端口已接线，dry_run 可用，M0-F-05） |
@@ -170,6 +173,8 @@ python -m wechat_agent db-check
 python -m wechat_agent calibrate --elements main_window,search_box,message_area,input_box
 python -m wechat_agent validate-tree --strict          # 现场自检（真实截屏）
 python -m wechat_agent locate input_box --json         # 打印坐标/分数/缩放
+python -m wechat_agent probe --chat 目标会话           # 采集诊断（只读，不落库不回复）
+python -m wechat_agent probe --text 样例.txt --json    # 离线解析诊断
 
 # 4.1) 分享/复用校准包（可选）
 python -m wechat_agent calibrate --export ./share/wechat-1280x720@1      # 导出
@@ -214,7 +219,7 @@ python -m wechat_agent run                     # M6（正式运行，建议先�
 
 ```powershell
 .\scripts\quality.bat          # 一键：ruff check → ruff format → mypy strict → pytest+coverage
-python -m pytest tests -q     # 单元测试（当前 268 passed）
+python -m pytest tests -q     # 单元测试（当前 323 passed）
 python -m mypy                # vrpa 框架包 strict
 ```
 
@@ -223,8 +228,8 @@ python -m mypy                # vrpa 框架包 strict
 | 静态检查 | ruff（E/F/I/UP/B/SIM） | 全绿 |
 | 格式 | ruff format | 全绿 |
 | 类型 | mypy strict（`vrpa`） | 0 error |
-| 测试 | pytest | 268 passed |
-| 覆盖率 | pytest-cov | 88.38%（门禁 ≥85%） |
+| 测试 | pytest | 323 passed |
+| 覆盖率 | pytest-cov | 86.85%（门禁 ≥85%） |
 | 一键 | `scripts\quality.bat` | `QUALITY GATE: PASS` |
 
 ---

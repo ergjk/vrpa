@@ -78,7 +78,9 @@ CAPABILITIES = frozenset({"group_chat", "text_only"})  # 例：QQ 群聊纯文�
 | `PlatformAdapter` / `AdapterRegistry` | `vrpa.platform` | 适配器契约与注册表 |
 | `contracts` / `fakes` | `vrpa.testing` | 合规套件与无环境 Fake |
 
-策略分发（解析策略执行器）将在 M2 由 `vrpa` 提供，适配器只需提供 `parser_pack` 数据。
+策略分发由框架 `vrpa.parsing.StrategyDispatcher` 统一执行（M2 已交付）；适配器只需提供 `parser_pack`
+数据与策略实现函数（可参考 `wechat_agent/perception/parser.py` 的 timestamp_prefix / sender_colon /
+multi_line_block 三策略）。
 
 ## 5. 注册与装配
 

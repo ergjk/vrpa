@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from vrpa.errors import CopyFailed, ElementNotVisible, LLMError, SessionSwitchFailed, VerifyFailed
+from vrpa.errors import ElementNotVisible, LLMError, VerifyFailed
 from vrpa.ports import IncomingMessage, MemoryItem, Rect
 from wechat_agent.act.executor import WeChatExecutor
 from wechat_agent.brain.client import WeChatBrain
@@ -128,13 +128,20 @@ def test_element_tree_validate_requires_all_elements(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------- 感知 / 执行 / 推理
-def test_perception_raises_domain_errors(tmp_path: Path) -> None:
-    perception = WeChatPerception(_config(tmp_path))
-    with pytest.raises(SessionSwitchFailed):
-        perception.activate()
-    with pytest.raises(SessionSwitchFailed):
-        perception.switch_session("测试会话")
-    with pytest.raises(CopyFailed):
+def test_perception_requires_real_environment(tmp_path: Path) -> None:
+    from vrpa.testing.fakes import FakeDriver, FakeElementTree, FakeWindowBackend
+    from vrpa.vision.window import WindowInfo
+    from wechat_agent.perception.window import WeChatWindow
+
+    info = WindowInfo(hwnd=1, title="微信", rect=Rect(0, 0, 10, 10), client_rect=Rect(0, 0, 10, 10))
+    cfg = _config(tmp_path)
+    perception = WeChatPerception(
+        cfg,
+        tree=FakeElementTree(fail_locate=True),
+        driver=FakeDriver(),
+        window=WeChatWindow(cfg, FakeWindowBackend(info)),
+    )
+    with pytest.raises(ElementNotVisible):
         perception.capture("测试会话")
 
 

@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from vrpa.vision.calibration import CalibrationResult, CalibrationSession
+from vrpa.vision.driver import Driver, PyAutoGuiDriver
 from vrpa.vision.locator import AnchorLocator, ValidationReport
 from vrpa.vision.matcher import AnchorMatcher, MatchResult, load_image
 from vrpa.vision.package import (
@@ -24,6 +25,7 @@ from vrpa.vision.profile import (
     save_profile,
 )
 from vrpa.vision.screen import AutoScreenSource, ImageScreenSource, ScreenSource
+from vrpa.vision.window import PywinautoWindowBackend, WindowBackend, WindowInfo
 
 __all__ = [
     "PROFILE_SCHEMA_VERSION",
@@ -34,7 +36,10 @@ __all__ = [
     "CalibrationResult",
     "CalibrationSession",
     "ElementSpec",
+    "Driver",
     "ImageScreenSource",
+    "PyAutoGuiDriver",
+    "PywinautoWindowBackend",
     "MatchResult",
     "PackageInfo",
     "export_package",
@@ -43,6 +48,8 @@ __all__ = [
     "Profile",
     "ScreenSource",
     "ValidationReport",
+    "WindowBackend",
+    "WindowInfo",
     "load_image",
     "load_profile",
     "save_profile",

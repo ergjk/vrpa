@@ -1,0 +1,128 @@
+"""M2-03 测试：框选 + Ctrl+C 采集（FakeTree/FakeDriver/ FakeWindow，无真实键鼠）。"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from vrpa.errors import CopyFailed, ElementNotVisible, WindowNotForeground
+from vrpa.ports import Rect
+from vrpa.testing.fakes import FakeDriver, FakeElementTree, FakeWindowBackend
+from vrpa.vision.window import WindowInfo
+from wechat_agent.core.config import load_config
+from wechat_agent.perception.capture import WeChatPerception
+from wechat_agent.perception.window import WeChatWindow
+
+ROOT = Path(__file__).resolve().parents[1]
+BASE_TEXT = (ROOT / "config.yaml").read_text(encoding="utf-8")
+CFG = load_config(ROOT / "config.yaml")
+
+AREA = Rect(100, 200, 400, 300)
+INFO = WindowInfo(hwnd=9, title="微信", rect=Rect(0, 0, 800, 620), client_rect=Rect(0, 20, 800, 600))
+CAPTURED = "张三: 你好\n李四: 在吗"
+
+
+def _config(tmp_path: Path, *, restore: bool = True):
+    text = BASE_TEXT.replace("data_dir: ./data", f"data_dir: {tmp_path.as_posix()}/data", 1)
+    if not restore:
+        text = text.replace("restore_clipboard: true", "restore_clipboard: false", 1)
+    path = tmp_path / "config.yaml"
+    path.write_text(text, encoding="utf-8")
+    return load_config(path)
+
+
+def _perception(
+    *,
+    restore: bool = True,
+    scripted: tuple[str, ...] = ("旧剪贴板", CAPTURED),
+    area: Rect | None = AREA,
+    foreground: bool = True,
+    tmp_path: Path,
+):
+    cfg = _config(tmp_path, restore=restore)
+    rects = {"message_area": area or AREA, "search_box": Rect(0, 0, 10, 10), "chat_title": Rect(0, 0, 5, 5)}
+    tree = FakeElementTree(element_rects=rects)
+    driver = FakeDriver(scripted=scripted)
+    backend = FakeWindowBackend(INFO, foreground=foreground)
+    window = WeChatWindow(cfg, backend)
+    perception = WeChatPerception(cfg, tree=tree, driver=driver, window=window, sleep=lambda _s: None)
+    return perception, driver, backend
+
+
+def test_capture_returns_clipboard_text(tmp_path: Path) -> None:
+    perception, driver, _ = _perception(tmp_path=tmp_path)
+    text = perception.capture("测试会话")
+    assert isinstance(text, str) and text == CAPTURED
+
+    drag_cfg = perception._config.capture.drag
+    expected_start = (
+        AREA.x + int(round(AREA.width * drag_cfg.from_x)),
+        AREA.y + int(round(AREA.height * drag_cfg.from_y)),
+    )
+    expected_end = (
+        AREA.x + int(round(AREA.width * drag_cfg.to_x)),
+        AREA.y + int(round(AREA.height * drag_cfg.to_y)),
+    )
+    assert driver.drags == [(expected_start, expected_end, drag_cfg.steps, drag_cfg.duration)]
+    assert driver.hotkeys == [("ctrl", "c")]
+    # 剪贴板已恢复
+    assert driver.clipboard_sets[-1] == "旧剪贴板"
+
+
+def test_capture_without_restore(tmp_path: Path) -> None:
+    perception, driver, _ = _perception(tmp_path=tmp_path, restore=False, scripted=(CAPTURED,))
+    assert perception.capture("测试会话") == CAPTURED
+    assert driver.clipboard_sets == []
+
+
+def test_capture_empty_clipboard_raises(tmp_path: Path) -> None:
+    perception, _, _ = _perception(tmp_path=tmp_path, scripted=("旧剪贴板", "   "))
+    with pytest.raises(CopyFailed, match="剪贴板为空"):
+        perception.capture("测试会话")
+
+
+def test_capture_missing_message_area(tmp_path: Path) -> None:
+    cfg = _config(tmp_path)
+    tree = FakeElementTree(element_rects={"search_box": Rect(0, 0, 10, 10)})
+    perception = WeChatPerception(
+        cfg,
+        tree=tree,
+        driver=FakeDriver(),
+        window=WeChatWindow(cfg, FakeWindowBackend(INFO)),
+        sleep=lambda _s: None,
+    )
+    with pytest.raises(ElementNotVisible, match="消息区"):
+        perception.capture("测试会话")
+
+
+def test_capture_activates_window(tmp_path: Path) -> None:
+    perception, _, backend = _perception(tmp_path=tmp_path, foreground=False)
+    perception.capture("测试会话")
+    assert backend.activated == [INFO.hwnd]
+
+
+def test_activate_and_switch_session(tmp_path: Path) -> None:
+    perception, driver, _ = _perception(tmp_path=tmp_path, scripted=("旧剪贴板", "测试会话: 你好"))
+    perception.activate()
+    perception.switch_session("测试会话")
+    assert ("ctrl", "v") in driver.hotkeys
+    assert driver.clipboard_sets[0] == "测试会话"
+
+
+def test_switch_session_failure_when_foreground_fails(tmp_path: Path) -> None:
+    class Stubborn(FakeWindowBackend):
+        def activate(self, hwnd: int) -> None:
+            self.activated.append(hwnd)
+
+    cfg = _config(tmp_path)
+    backend = Stubborn(INFO, foreground=False)
+    perception = WeChatPerception(
+        cfg,
+        tree=FakeElementTree(element_rects={"search_box": Rect(0, 0, 10, 10)}),
+        driver=FakeDriver(),
+        window=WeChatWindow(cfg, backend, wait_timeout=0.2, sleep=lambda _s: None),
+        sleep=lambda _s: None,
+    )
+    with pytest.raises(WindowNotForeground):
+        perception.switch_session("测试会话")

@@ -27,7 +27,15 @@ from dataclasses import dataclass
 from typing import Any, cast
 
 from vrpa.config.plugin import is_platform_plugin
-from vrpa.errors import CopyFailed, ElementNotVisible, LLMError, SessionSwitchFailed, VerifyFailed
+from vrpa.errors import (
+    CopyFailed,
+    ElementNotVisible,
+    LLMError,
+    SessionSwitchFailed,
+    VerifyFailed,
+    WindowNotForeground,
+    WindowNotFound,
+)
 from vrpa.platform import AdapterInfo, PlatformAdapter, is_platform_adapter
 from vrpa.ports import (
     Brain,
@@ -194,7 +202,15 @@ def run_all(adapter: PlatformAdapter, options: Any = None) -> ContractReport:
 
     def check_port_smoke() -> str:
         notes: list[str] = []
-        tolerated = (ElementNotVisible, CopyFailed, SessionSwitchFailed, VerifyFailed, LLMError)
+        tolerated = (
+            ElementNotVisible,
+            CopyFailed,
+            SessionSwitchFailed,
+            VerifyFailed,
+            LLMError,
+            WindowNotFound,
+            WindowNotForeground,
+        )
         ports = _ports()
 
         element_ids = list(ports.element_tree.element_ids())

@@ -143,6 +143,13 @@ def _cmd_locate(argv: Sequence[str]) -> int:
     return run_locate(argv)
 
 
+def _cmd_probe(argv: Sequence[str]) -> int:
+    """M2-05：采集诊断（只读，不落库、不回复）。"""
+    from wechat_agent.tools.probe import run_probe
+
+    return run_probe(argv)
+
+
 def _cmd_db_check(argv: Sequence[str]) -> int:
     """M0-06：双库结构与迁移检查（--schema / --repair / --json）。"""
     from wechat_agent.tools.db_check import run_db_check
@@ -219,6 +226,7 @@ register_handler("db-check", _cmd_db_check)
 register_handler("validate-tree", _cmd_validate_tree)
 register_handler("calibrate", _cmd_calibrate)
 register_handler("locate", _cmd_locate)
+register_handler("probe", _cmd_probe)
 
 
 if __name__ == "__main__":
