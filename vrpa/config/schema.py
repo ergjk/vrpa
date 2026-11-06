@@ -98,6 +98,9 @@ class UiaTreeConfig:
     locate_retries: int
     retry_wait: tuple[float, float]
     allow_ratio_fallback: bool
+    # 可选：外部校准包（绝对路径）；设置后优先于 dir/anchors_dir 的默认推导
+    profile_path: str | None = None
+    anchors_root: str | None = None
 
 
 @dataclass(frozen=True)
@@ -212,10 +215,28 @@ def parse_app(raw: Mapping[str, Any], base: Path) -> AppConfig:
     )
 
 
+def _optional_path(raw: Mapping[str, Any], key: str, base: Path) -> str | None:
+    value = raw.get(key)
+    if value is None:
+        return None
+    return resolve_path(base, _as_str(value, f"uia_tree.{key}"), f"uia_tree.{key}")
+
+
 def parse_uia_tree(raw: Mapping[str, Any], base: Path) -> UiaTreeConfig:
     _check_keys(
         raw,
-        ("profile", "dir", "anchors_dir", "cache_ttl", "match", "locate_retries", "retry_wait", "allow_ratio_fallback"),
+        (
+            "profile",
+            "dir",
+            "anchors_dir",
+            "profile_path",
+            "anchors_root",
+            "cache_ttl",
+            "match",
+            "locate_retries",
+            "retry_wait",
+            "allow_ratio_fallback",
+        ),
         "uia_tree",
     )
     profile = _as_str(raw.get("profile"), "uia_tree.profile")
@@ -247,6 +268,8 @@ def parse_uia_tree(raw: Mapping[str, Any], base: Path) -> UiaTreeConfig:
         locate_retries=_as_int(raw.get("locate_retries"), "uia_tree.locate_retries", minimum=0, maximum=10),
         retry_wait=_as_range(raw.get("retry_wait"), "uia_tree.retry_wait"),
         allow_ratio_fallback=allow_ratio_fallback,
+        profile_path=_optional_path(raw, "profile_path", base),
+        anchors_root=_optional_path(raw, "anchors_root", base),
     )
 
 

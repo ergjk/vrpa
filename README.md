@@ -1,8 +1,8 @@
 # VRPA-WeChat-Agent
 
 > **VRPA（Vision RPA）通用 RPA 框架底座 + 微信参考实现** · MIT License
-> 状态：**M0 框架底座已完成（M0-F-01 ~ M0-F-06）**（206 项测试全绿 · 覆盖率 91.25% · ruff / mypy strict 全绿）
-> M0-F-06 已完成弃用清理：旧 `wechat_agent.core.errors/logging` shim 与 `WECHAT_AGENT_*` 环境变量已移除，统一 `VRPA_*`。
+> 状态：**M0 框架底座 + M1 假 UIA 树与视觉定位已完成**（268 项测试全绿 · 覆盖率 88.38% · ruff / mypy strict 全绿）
+> M0-F-06：旧 shim 与 `WECHAT_AGENT_*` 环境变量已移除；M1-01~06：profile schema、多尺度锚点匹配、定位缓存、calibrate、validate-tree 全部交付。
 
 ---
 
@@ -12,7 +12,7 @@
 
 | 层 | 包 | 定位 | 依赖 |
 |---|---|---|---|
-| **通用框架底座** | `vrpa` | 把 RPA 场景中的通用能力沉淀为平台无关的框架：**双库记忆存储引擎、异常与退出码契约、拟人化调度队列、视觉锚点匹配、配置/日志/审计、平台适配器契约与合规测试套件** | 仅 Python 标准库 |
+| **通用框架底座** | `vrpa` | 把 RPA 场景中的通用能力沉淀为平台无关的框架：**双库记忆存储引擎、异常与退出码契约、拟人化调度队列、视觉锚点匹配、配置/日志/审计、平台适配器契约与合规测试套件** | Python 标准库（视觉子系统需 `numpy` + `opencv-python`） |
 | **微信参考实现** | `wechat_agent` | 基于 `vrpa` 接入微信 PC 的真实实现：**假 UIA 树视觉定位、框选 + 剪贴板采集、状态回写去重**、LLM 推理、HITL 控制台与插件 | `vrpa` + RPA/LLM 第三方库 |
 
 ```
@@ -27,7 +27,7 @@
 │  双库存储引擎 · 异常/退出码契约 · 拟人化调度队列 · 视觉锚点匹配  │
 │  配置内核 · 日志审计 · 平台适配器接口 · 适配器合规测试套件       │
 └───────────────────────────┬──────────────────────────────────┘
-                            │ 仅标准库
+                            │ 标准库（视觉：numpy/opencv）
                         Python stdlib
 ```
 
@@ -60,14 +60,14 @@
 | 日志 / 审计 / 脱敏 | RotatingFileHandler、trace_id 贯穿、JSONL 审计、API Key / 手机号 / 身份证 / 邮箱打码 | 已实现 M0-03 |
 | 配置内核 | 通用配置加载、校验、环境变量覆盖（`VRPA_*`）；通用段（app/uia_tree/capture/llm/humanize/ratelimit/safety/control/plugins/display）已上提 `vrpa.config.schema`，平台字段由适配器插件校验 | 已完成 M0-F-03 / F-06 |
 | 拟人化调度队列 | 优先级 FIFO、跨会话轮转、限流 / 静默时段、可打断的拟人延迟（思考 / 打字 / 发送节奏） | 规划中 M4 |
-| 视觉锚点匹配 | 元素树 profile + 多尺度模板匹配定位（失败即中止，禁止坐标兜底），供各平台适配器复用 | 规划中 M1（微信参考实现先行，随后按端口契约抽入 `vrpa`） |
+| 视觉锚点匹配 | 元素树 profile + 多尺度模板匹配定位（失败即中止，禁止坐标兜底），供各平台适配器复用 | 已实现 M1（`vrpa.vision`：profile / matcher / locator / calibration） |
 | 平台适配器契约 | `PlatformAdapter` 协议 + `AdapterRegistry` + **适配器合规测试套件**（`vrpa.testing.contracts`，第三方实现必须全绿才能接入） | 已实现 M0-F-04（微信适配器 M0-F-05 全绿接入） |
 
 ### 3.2 应用层特性（由 `wechat_agent` 提供，可作为适配器示例）
 
 | 能力 | 说明 | 状态 |
 |---|---|---|
-| 假 UIA 树视觉定位 | 微信 4.x 无原生控件树，自建 JSON 元素树 + 锚点图匹配定位点击目标（只服务"操作界面"） | 规划中 M1 |
+| 假 UIA 树视觉定位 | 微信 4.x 无原生控件树，自建 JSON 元素树 + 锚点图匹配定位点击目标（只服务"操作界面"） | 已实现 M1-01~06（calibrate / validate-tree / locate 可用） |
 | 剪贴板纯文本采集 | 消息流**唯一**来源：鼠标框选 + `Ctrl+C`，禁止对消息做图像识别（红线 R3） | 规划中 M2 |
 | 状态回写去重 | 发送后立即以 `assistant` 写库；下轮抓屏按文本哈希去重；无前缀消息识别为主人多端发送，入库不回复 | 规划中 M3 |
 | LLM 推理 | Persona + 长期记忆 + 最近 N 轮上下文，Token 预算裁剪、输出清洗与安全过滤 | 规划中 M5 |
@@ -87,11 +87,12 @@ vrpa/                     # 通用框架底座（可独立发布/复用）
   errors.py               #   平台无关异常族 + 退出码契约
   element_tree.py         #   通用 profile 元素树（严格失败语义，M0-F-05）
   memory/                 #   双库引擎：schema.sql / 迁移 / 备份 / SQLite MemoryStore（M0-F-05）
+  vision/                 #   profile schema / 多尺度匹配 / 定位缓存 / 校准核心（M1）
   config/                 #   配置内核：env / validators / plugin / loader / schema（通用段）
   ports.py                #   五端口协议 + 跨层 DTO（M0-F-04）
   platform.py             #   PlatformAdapter 协议 + AdapterRegistry（M0-F-04）
   testing/                #   Fakes + contracts 合规测试套件（M0-F-04）
-tests/                    # 206 项测试（配置/日志/异常/接口/双库/CLI/端口/契约/兼容 shim）
+tests/                    # 268 项测试（配置/日志/异常/接口/双库/CLI/端口/契约/兼容 shim）
 docs/                     # 技术方案、行动清单、架构、ADR、适配器指南
 scripts/quality.ps1|.bat  # 一键质量门禁（ruff + mypy strict + pytest + coverage）
 wechat_agent/             # 微信参考实现（六层模块见 §5.1）
@@ -101,7 +102,7 @@ wechat_agent/             # 微信参考实现（六层模块见 §5.1）
   memory/                 #   双库门面 shim + Config 薄适配（引擎已上提 vrpa.memory）
   perception/             #   ProfileElementTree 绑定 + 剪贴板采集 Perception（M1-M2）
   brain/ act/             #   推理 Brain（M5）；执行 Executor（M6，干跑已可用）
-  control/ plugins/ tools/  #   控制台（M6）；插件（M6）；校准 / 回放 / doctor 工具
+  control/ plugins/ tools/  #   控制台（M6）；插件（M6）；calibrate / locate / validate-tree / db-check 工具
 ```
 
 ---
@@ -128,7 +129,7 @@ wechat_agent/             # 微信参考实现（六层模块见 §5.1）
 3. **定位原理**：取顶层窗口客户区 → 沿父链裁剪屏幕 → OpenCV 多尺度模板匹配（`TM_CCOEFF_NORMED`）→ 比例换算绝对坐标。
 4. **失败语义（硬性）**：匹配低于阈值即 `ElementNotVisible`，立即中止并重试，**绝不复用旧坐标、绝不用比例坐标兜底**；分辨率/DPI/窗口矩形变化时 `ProfileMismatch`，要求重新校准。
 5. **边界（红线 R3）**：假 UIA 树仅用于操作界面；**消息流只准走「鼠标框选 + `Ctrl+C` 剪贴板」**，禁止对消息做图像识别 / OCR。
-6. **校准**：`calibrate` 逐元素框选 → 存锚点图 → 立即回验 → 输出 overlay 截图；`validate-tree --strict` 现场自检（M1 交付）。
+6. **校准**：`calibrate` 逐元素框选 → 存锚点图 → 立即回验；`validate-tree --strict` 现场自检（M1-04/05 已交付）。
 
 ### 5.3 工作机理与数据流
 
@@ -165,10 +166,19 @@ copy .env.example .env        # 填入 DEEPSEEK_API_KEY
 python -m wechat_agent selftest
 python -m wechat_agent db-check
 
-# 4) 之后的步骤按里程碑交付（当前为占位命令）
+# 4) M1 视觉校准与自检（✅ 已可用）
+python -m wechat_agent calibrate --elements main_window,search_box,message_area,input_box
+python -m wechat_agent validate-tree --strict          # 现场自检（真实截屏）
+python -m wechat_agent locate input_box --json         # 打印坐标/分数/缩放
+
+# 4.1) 分享/复用校准包（可选）
+python -m wechat_agent calibrate --export ./share/wechat-1280x720@1      # 导出
+python -m wechat_agent calibrate --import ./share/wechat-1280x720@1      # 导入（目标已存在需 --force）
+# 或直接用外部路径（无需复制）：config.yaml -> uia_tree.profile_path / anchors_root 填绝对路径
+# 详见 docs/calibration-package.md
+
+# 5) 之后的步骤按里程碑交付
 python -m wechat_agent doctor                  # M0-07
-python -m wechat_agent calibrate               # M1-04（假 UIA 树校准）
-python -m wechat_agent validate-tree --strict  # M1-05（锚点自检）
 python -m wechat_agent run --dry-run           # M4-06（干跑，不真实发送）
 python -m wechat_agent run                     # M6（正式运行，建议先小号验证）
 ```
@@ -204,7 +214,7 @@ python -m wechat_agent run                     # M6（正式运行，建议先�
 
 ```powershell
 .\scripts\quality.bat          # 一键：ruff check → ruff format → mypy strict → pytest+coverage
-python -m pytest tests -q     # 单元测试（当前 206 passed）
+python -m pytest tests -q     # 单元测试（当前 268 passed）
 python -m mypy                # vrpa 框架包 strict
 ```
 
@@ -213,8 +223,8 @@ python -m mypy                # vrpa 框架包 strict
 | 静态检查 | ruff（E/F/I/UP/B/SIM） | 全绿 |
 | 格式 | ruff format | 全绿 |
 | 类型 | mypy strict（`vrpa`） | 0 error |
-| 测试 | pytest | 206 passed |
-| 覆盖率 | pytest-cov | 91.25%（门禁 ≥85%） |
+| 测试 | pytest | 268 passed |
+| 覆盖率 | pytest-cov | 88.38%（门禁 ≥85%） |
 | 一键 | `scripts\quality.bat` | `QUALITY GATE: PASS` |
 
 ---
@@ -226,6 +236,7 @@ python -m mypy                # vrpa 框架包 strict
 | [README.md](README.md) | 分层定位、能力矩阵、受众导航、微信实现说明、红线 | 本文件 |
 | [docs/architecture.md](docs/architecture.md) | 目标架构：双包分层（`vrpa` + `wechat_agent`）、依赖规则、M0-F 迁移路线 | Accepted |
 | [docs/writing-an-adapter.md](docs/writing-an-adapter.md) | **VRPA 适配器指南**：QQ / 钉钉等平台接入步骤 | 定稿 v1.0（M0-F-06） |
+| [docs/calibration-package.md](docs/calibration-package.md) | **校准包分享指南**：profile/anchors 包结构、导出/导入/外部路径 | 新增（M1） |
 | [docs/ADR/](docs/ADR/) | ADR-0001 框架分层 / 0002 配置 schema v2 / 0003 接口稳定与适配器契约 | Accepted |
 | [docs/技术方案-V1.0.md](docs/技术方案-V1.0.md) | 详细技术设计：假 UIA 树算法、双库、去重、队列/延迟、控制台、异常、测试策略 | M0 框架底座已完成 |
 | [docs/行动清单-V1.0.md](docs/行动清单-V1.0.md) | 施工图：M0~M6 全量任务（任务描述 / 输入输出 / DoD）、阶段门禁 | M0 框架底座已完成 |

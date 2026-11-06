@@ -35,6 +35,10 @@ CAPABILITIES = frozenset({"group_chat", "text_only"})  # 例：QQ 群聊纯文�
 
 ## 3. 元素树 profile 规范（模板）
 
+> 需要把校准结果分享给社区 / 使用别人的分享包？见 [校准包（Profile & Anchors）分享指南](calibration-package.md)。
+
+> M1-01 已落地 schema v1 实现（`vrpa.vision.profile`）：字段与校验规则见该模块 docstring；`calibrate` 生成的 profile 即为该格式。
+
 ```json
 {
   "schema": 1,

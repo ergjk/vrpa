@@ -34,6 +34,7 @@ vrpa/                       # 框架底座（可独立发布为 vrpa）
 ├── platform.py                #   PlatformAdapter 协议 + AdapterRegistry + 能力声明
 ├── element_tree.py            #   通用 profile 元素树（严格失败语义，M0-F-05）
 ├── memory/                    #   双库引擎：DDL/迁移/备份/自检 + SQLite MemoryStore（M0-F-05）
+├── vision/                    #   profile schema / 多尺度匹配 / 定位器 / 校准核心（M1）
 ├── cli.py                     #   通用 CLI 骨架（注册表/退出码/异常兜底/帮助）
 └── testing/
     ├── fakes.py               #   Fake 全套（M4 全链路依赖）
@@ -75,7 +76,7 @@ wechat_agent/                  # 微信应用 + 微信适配器
 
 | 项 | 策略 |
 |---|---|
-| 旧模块路径 `wechat_agent.core.*` | 保留 shim 模块，re-export 框架符号；首次导出打 `DeprecationWarning`，下一里程碑删除 |
+| 旧模块路径 `wechat_agent.core.*` | M0-F-02 保留兼容 shim；**M0-F-06 已删除**（应用统一 `vrpa.*`） |
 | 环境变量 | `WECHAT_AGENT_*` 与新 `VRPA_*` 并存一个版本；同时设置时新名优先 |
 | 配置 | schema v1（`wechat:` 段）自动升级为 v2（`platform:` 段），升级时打印迁移提示 |
 | 类名 | 旧应用层类名别名已按指令彻底移除（统一 `AgentFrameworkError`） |
@@ -102,6 +103,12 @@ wechat_agent/                  # 微信应用 + 微信适配器
 | M0-F-04（已完成） | `ports.py` / `platform.py` / `AdapterRegistry` / `testing.contracts` / `testing.fakes` | contracts kit 可运行；Fake 适配器全绿；反例可检出 |
 | M0-F-05（已完成） | 微信适配器注册 + 应用层去框架化（memory/brain/act/control 接 ports） | `WeChatAdapter` 接入 `AdapterRegistry`；应用接口与 `vrpa.ports` 统一；契约套件 10/10 全绿 |
 | M0-F-06（已完成） | 弃用清理、指南定稿、README/CHANGELOG 更新 | 旧 shim / `WECHAT_AGENT_*` 环境变量移除；通用配置段上提 `vrpa.config.schema`；适配器指南定稿；无 DeprecationWarning |
+| M1-01（已完成） | 假 UIA 树 profile schema 与加载/校验 | `vrpa.vision.profile`：schema=1、锚点/父链/环检测、原子保存 |
+| M1-02（已完成） | 锚点图多尺度匹配引擎 | `vrpa.vision.matcher`：TM_CCOEFF_NORMED、灰度、降采样、阈值失败返回 None |
+| M1-03（已完成） | locate() 定位 + 缓存 + 失败语义 | `vrpa.vision.locator`：父区域裁剪、绝对坐标、TTL 缓存、严格 ElementNotVisible |
+| M1-04（已完成） | calibrate 校准向导 | `vrpa.vision.calibration` + `wechat_agent/tools/calibrate.py`（交互/离线双模式） |
+| M1-05（已完成） | validate-tree 严格校验 | `wechat_agent/tools/validate_tree.py`：结构+现场定位、--image 离线、--json |
+| M1-06（已完成） | 定位性能与缓存测试 | 缓存命中零截屏、TTL 失效、50 次缓存定位 < 1s |
 
 ## 8. 与 V1.0 功能里程碑的关系
 

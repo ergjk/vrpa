@@ -122,6 +122,27 @@ def _cmd_selftest(argv: Sequence[str]) -> int:
     return run_selftest(argv)
 
 
+def _cmd_validate_tree(argv: Sequence[str]) -> int:
+    """M1-05：假 UIA 树 profile 与锚点图严格校验。"""
+    from wechat_agent.tools.validate_tree import run_validate_tree
+
+    return run_validate_tree(argv)
+
+
+def _cmd_calibrate(argv: Sequence[str]) -> int:
+    """M1-04：假 UIA 树校准向导。"""
+    from wechat_agent.tools.calibrate import run_calibrate
+
+    return run_calibrate(argv)
+
+
+def _cmd_locate(argv: Sequence[str]) -> int:
+    """M1-03：定位单个界面元素。"""
+    from wechat_agent.tools.locate import run_locate
+
+    return run_locate(argv)
+
+
 def _cmd_db_check(argv: Sequence[str]) -> int:
     """M0-06：双库结构与迁移检查（--schema / --repair / --json）。"""
     from wechat_agent.tools.db_check import run_db_check
@@ -195,6 +216,9 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 register_handler("selftest", _cmd_selftest)
 register_handler("db-check", _cmd_db_check)
+register_handler("validate-tree", _cmd_validate_tree)
+register_handler("calibrate", _cmd_calibrate)
+register_handler("locate", _cmd_locate)
 
 
 if __name__ == "__main__":

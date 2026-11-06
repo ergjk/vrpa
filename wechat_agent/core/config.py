@@ -165,9 +165,15 @@ class Config:
         return f"{self.display.width}x{self.display.height}@{scale}"
 
     def profile_path(self) -> Path:
+        if self.uia_tree.profile_path is not None:
+            return Path(self.uia_tree.profile_path)
         return self.uia_tree_dir / f"{self.profile_name()}.json"
 
     def profile_anchors_dir(self) -> Path:
+        if self.uia_tree.anchors_root is not None:
+            return Path(self.uia_tree.anchors_root)
+        if self.uia_tree.profile_path is not None:
+            return Path(self.uia_tree.profile_path).parent / "anchors"
         return self.anchors_dir / self.profile_name()
 
     def ensure_dirs(self) -> tuple[Path, ...]:

@@ -27,8 +27,11 @@ app:
 # —— 假 UIA 树（自定义视觉映射层，M1 核心）——
 uia_tree:
   profile: auto                  # auto = "<分辨率>@<DPI>"，如 "2560x1440@1.25"
-  dir: ./data/uia_tree           # profile JSON 目录
+  dir: ./data/uia_tree           # profile JSON 目录（默认模式）
   anchors_dir: ./data/anchors    # 锚点图目录（按 profile 分子目录）
+  # 可选：使用别人分享的校准包（绝对路径，设置后优先于 dir/anchors_dir）
+  # profile_path: D:/shared/wechat/1280x720@1/profile.json
+  # anchors_root: D:/shared/wechat/1280x720@1/anchors
   cache_ttl: 2.0                 # 定位结果缓存（秒）；任何界面动作后立即失效
   match:
     threshold: 0.88              # 低于此分视为「找不到」，禁止坐标兜底

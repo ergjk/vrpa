@@ -63,8 +63,22 @@
   - `docs/writing-an-adapter.md` 定稿 v1.0（新增接入前检查清单）
   - 测试 206 passed / 覆盖率 91.25%
 
+### Added
+- M1 假 UIA 树校准与视觉定位（M1-01 ~ M1-06）：
+  - `vrpa/vision/profile.py`：profile schema v1、加载/保存、锚点与父链/环检测（M1-01）
+  - `vrpa/vision/matcher.py`：OpenCV 多尺度模板匹配（灰度、降采样、阈值失败返回 None）（M1-02）
+  - `vrpa/vision/locator.py`：父区域裁剪、绝对坐标、TTL 缓存、严格 `ElementNotVisible`、validate 报告（M1-03）
+  - `vrpa/vision/calibration.py` + `wechat_agent/tools/calibrate.py`：框选/离线双模式校准向导（M1-04）
+  - `wechat_agent/tools/validate_tree.py`：`validate-tree --strict`（结构 + 现场定位 + `--image` 离线 + `--json`）（M1-05）
+  - `wechat_agent/tools/locate.py`：`locate` 定位命令（坐标/分数/缩放）
+  - `WeChatElementTree` 接入框架 `AnchorLocator`；CLI 注册 calibrate / validate-tree / locate
+  - 校准包分享（M1 补充）：`vrpa.vision.package`（export/import/zip/清单校验）+ `calibrate --export/--import`
+  - 配置口子：`uia_tree.profile_path` / `uia_tree.anchors_root` 支持外部绝对路径（优先于 data 目录）
+  - 新增 `docs/calibration-package.md`：包结构、必需文件、导出/导入、外部路径与兼容性说明
+  - 测试：profile / matcher / locator / calibration / CLI 离线链路 + 缓存性能 + 校准包；268 passed / 88.38%
+
 ### Planned
-- M0-F-01 ~ M0-F-06 已全部完成；下一步 M1（假 UIA 树校准与视觉定位）待主控官立项
+- M1-01 ~ M1-06 已完成；下一步 M2（框选 + Ctrl+C 采集与解析）待主控官立项
 - M0-07：环境体检 `doctor`
 - M0-08：控制台骨架
 - M0-09：红线自检 `selftest --redlines`
