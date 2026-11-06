@@ -111,8 +111,23 @@
   - 场景：`tests/fixtures/simulation/`（基础流程 / 重复守卫 / 暂停接管 / 熔断）
   - 测试：队列 / 延迟 / 调度 / 状态机 / 编排 / simulate；414 passed / 87.77%
 
+### Added
+- M5 LLM 推理层（M5-01 ~ M5-05）：
+  - `vrpa/llm/client.py`：OpenAI 兼容 Chat Completions（urllib 传输、超时重试、用量统计、/models ping）
+  - `vrpa/llm/prompt.py`：五模块固定顺序（人设/专属知识/全局知识/核心记忆/流水）+ 三策略裁剪；
+    XML 防注入、知识转义、当前消息保护
+  - `vrpa/knowledge/`：`KnowledgeProvider` 协议、关键词/标题检索（禁止全量塞入）、文件 mtime 热加载
+  - 知识接入三端：`data/knowledge/` 目录、`/knowledge list|reload|add` 控制台预留、第三方 Provider
+  - `sessions/<chat_id>/prompt.json` 会话级 `trim_policy` 覆盖；知识与 `memory.db` 物理隔离（测试守护）
+  - `vrpa/llm/postprocess.py`：去 Markdown/链接、敏感词打码、回复截断
+  - `vrpa/llm/persona.py`：人设文件 mtime 热加载（失败保留旧版本）
+  - `wechat_agent/brain/client.py`：WeChatBrain 真实链路（记忆召回 -> Prompt -> LLM -> 后处理）
+  - `wechat_agent/tools/llm_ping.py` + `personas/wechat.txt`；`config.llm.persona_path`
+  - 测试隔离：`tests/conftest.py` 全局清除 API Key；网络/重试/裁剪全部 Fake HTTP
+  - 测试：455 passed / 87.84%
+
 ### Planned
-- M0 ~ M4 已完成；下一步 M5（LLM 推理层与 Prompt 预算）待主控官立项
+- M0 ~ M5 已完成；下一步 M6（执行层、控制台与正式运行）待主控官立项
 - M0-07：环境体检 `doctor`
 - M0-08：控制台骨架
 - M0-09：红线自检 `selftest --redlines`

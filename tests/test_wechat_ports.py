@@ -165,6 +165,3 @@ def test_brain_requires_api_key(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
         brain.ping()
     with pytest.raises(LLMError):
         brain.generate([{"role": "user", "content": "hi"}])
-
-    monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-test-1234567890")
-    assert brain.ping() == 0.0

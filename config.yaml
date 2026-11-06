@@ -69,6 +69,9 @@ llm:
   max_prompt_tokens: 3000
   memory_top_k: 6
   fail_policy: hold              # hold（转人工） | skip
+  persona_path: ./personas/wechat.txt   # 人设文件（mtime 热加载）
+  prompt_trim_policy: history_first     # history_first | memory_first | knowledge_first
+                                        # 会话级覆盖：sessions/<chat_id>/prompt.json
 
 humanize:
   perception_delay: [0.3, 1.2]

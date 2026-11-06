@@ -33,6 +33,7 @@ _LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR"}
 _POLICIES = {"ignore", "queue_confirm"}
 _TITLE_VERIFY_MODES = {"capture_first_sender", "search_text"}
 _FAIL_POLICIES = {"hold", "skip"}
+_TRIM_POLICIES = {"history_first", "memory_first", "knowledge_first"}
 _VISIBILITIES = {"private", "public", "list"}
 _PROFILE_RE = re.compile(r"^\d{3,5}x\d{3,5}@\d+(?:\.\d+)?$")
 _QUIET_RE = re.compile(r"^([01]?\d|2[0-3]):[0-5]\d-([01]?\d|2[0-3]):[0-5]\d$")
@@ -138,6 +139,8 @@ class LlmConfig:
     max_prompt_tokens: int
     memory_top_k: int
     fail_policy: str
+    persona_path: str = ""
+    prompt_trim_policy: str = "history_first"
 
 
 @dataclass(frozen=True)
@@ -317,7 +320,7 @@ def parse_capture(raw: Mapping[str, Any]) -> CaptureConfig:
     )
 
 
-def parse_llm(raw: Mapping[str, Any]) -> LlmConfig:
+def parse_llm(raw: Mapping[str, Any], base: Path | None = None) -> LlmConfig:
     _check_keys(
         raw,
         (
@@ -332,12 +335,20 @@ def parse_llm(raw: Mapping[str, Any]) -> LlmConfig:
             "max_prompt_tokens",
             "memory_top_k",
             "fail_policy",
+            "persona_path",
+            "prompt_trim_policy",
         ),
         "llm",
     )
     base_url = _as_str(raw.get("base_url"), "llm.base_url")
     if not base_url.startswith(("http://", "https://")):
         raise ConfigError(f"llm.base_url 必须是 http(s) 地址，实际为 {base_url!r}")
+    persona_raw = raw.get("persona_path")
+    persona_path = (
+        resolve_path(base or Path("."), _as_str(persona_raw, "llm.persona_path"), "llm.persona_path")
+        if persona_raw is not None
+        else str(((base or Path(".")) / "personas" / "default.txt").resolve())
+    )
     return LlmConfig(
         provider=_as_str(raw.get("provider"), "llm.provider"),
         base_url=base_url,
@@ -350,6 +361,12 @@ def parse_llm(raw: Mapping[str, Any]) -> LlmConfig:
         max_prompt_tokens=_as_int(raw.get("max_prompt_tokens"), "llm.max_prompt_tokens", minimum=500),
         memory_top_k=_as_int(raw.get("memory_top_k"), "llm.memory_top_k", minimum=0, maximum=50),
         fail_policy=_as_str(raw.get("fail_policy"), "llm.fail_policy", choices=_FAIL_POLICIES),
+        persona_path=persona_path,
+        prompt_trim_policy=_as_str(
+            raw.get("prompt_trim_policy", "history_first"),
+            "llm.prompt_trim_policy",
+            choices=_TRIM_POLICIES,
+        ),
     )
 
 
@@ -483,7 +500,7 @@ def parse_framework_sections(document: Mapping[str, Any], base: Path) -> Framewo
         app=parse_app(_section(document, "app"), base),
         uia_tree=parse_uia_tree(_section(document, "uia_tree"), base),
         capture=parse_capture(_section(document, "capture")),
-        llm=parse_llm(_section(document, "llm")),
+        llm=parse_llm(_section(document, "llm"), base),
         humanize=parse_humanize(_section(document, "humanize")),
         ratelimit=parse_ratelimit(_section(document, "ratelimit")),
         safety=parse_safety(_section(document, "safety")),

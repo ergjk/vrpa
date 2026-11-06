@@ -38,6 +38,8 @@ vrpa/                       # 框架底座（可独立发布为 vrpa）
 ├── parsing/                   #   解析策略分发器（M2）
 ├── memory/                    #   history / dedup / long_term / jobs（M3）
 ├── scheduling/                #   queue / delay / scheduler / machine / loop（M4）
+├── knowledge/                 #   KnowledgeProvider / 检索门面 / 文件热加载（M5-02）
+├── llm/                       #   client / prompt / postprocess / persona / policy（M5）
 ├── cli.py                     #   通用 CLI 骨架（注册表/退出码/异常兜底/帮助）
 └── testing/
     ├── fakes.py               #   Fake 全套（M4 全链路依赖）
@@ -131,6 +133,11 @@ wechat_agent/                  # 微信应用 + 微信适配器
 | M4-04（已完成） | 状态机与熔断 | run 状态机 + 连续失败熔断（open/half-open/closed）、熔断自动暂停 |
 | M4-05（已完成） | Fake 后端与 --simulate | `run --simulate` 全链路（Fake 后端 + dry_run，零真实键鼠） |
 | M4-06（已完成） | 打断与接管通道 | `ControlChannel`：pause/resume/stop/takeover；拟人等待可立即打断 |
+| M5-01（已完成） | LLM 客户端 | `vrpa.llm.client`：OpenAI 兼容、超时重试、用量统计、`/models` 连通性 |
+| M5-02（已完成） | Prompt 组装与预算 | 五模块固定顺序（人设/专属知识/全局知识/核心记忆/流水）；`prompt_trim_policy` 全局 + `sessions/<chat_id>/prompt.json` 覆盖；知识只读隔离、XML 防注入、关键词检索、mtime 热加载 |
+| M5-03（已完成） | 后处理与安全 | 去 Markdown/链接、敏感词打码、按 `max_reply_chars` 截断 |
+| M5-04（已完成） | 人设热加载 | `PersonaLoader` 按 mtime 自动重载，读取失败保留旧版本 |
+| M5-05（已完成） | llm-ping 与集成 | `llm-ping` CLI + `WeChatBrain` 真实链路（FakeTransport 测试，零真实 API） |
 
 ## 8. 与 V1.0 功能里程碑的关系
 

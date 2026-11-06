@@ -54,7 +54,7 @@ _COMMAND_SPECS = (
     ("probe", "打印原始剪贴板文本（不入库、不回复）", "M2-05", int(ExitCode.USAGE)),
     ("replay", "离线回放 parser / dedup / flow 场景", "M3-07", int(ExitCode.USAGE)),
     ("db-check", "双库结构与迁移检查", "M0-06", int(ExitCode.USAGE)),
-    ("llm-ping", "LLM 连通性检查 / 单轮问答", "M5-05", int(ExitCode.USAGE)),
+    ("llm-ping", "LLM 连通性检查（GET /models）", "M5-05", int(ExitCode.USAGE)),
     ("run", "主进程（--simulate 全链路；真实运行待 M6）", "M4-05/06", int(ExitCode.USAGE)),
     ("send", "控制台接管发送（等价 /say）", "M6-01", int(ExitCode.USAGE)),
     ("plugin", "插件管理（list / run）", "M6-04", int(ExitCode.USAGE)),
@@ -141,6 +141,13 @@ def _cmd_locate(argv: Sequence[str]) -> int:
     from wechat_agent.tools.locate import run_locate
 
     return run_locate(argv)
+
+
+def _cmd_llm_ping(argv: Sequence[str]) -> int:
+    """M5-05：LLM 连通性检查。"""
+    from wechat_agent.tools.llm_ping import run_llm_ping
+
+    return run_llm_ping(argv)
 
 
 def _cmd_run(argv: Sequence[str]) -> int:
@@ -243,6 +250,7 @@ register_handler("locate", _cmd_locate)
 register_handler("probe", _cmd_probe)
 register_handler("replay", _cmd_replay)
 register_handler("run", _cmd_run)
+register_handler("llm-ping", _cmd_llm_ping)
 
 
 if __name__ == "__main__":
