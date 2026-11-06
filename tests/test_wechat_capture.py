@@ -11,7 +11,7 @@ from vrpa.ports import Rect
 from vrpa.testing.fakes import FakeDriver, FakeElementTree, FakeWindowBackend
 from vrpa.vision.window import WindowInfo
 from wechat_agent.core.config import load_config
-from wechat_agent.perception.capture import WeChatPerception
+from wechat_agent.perception.capture import WeChatPerception, _sample_end_hold
 from wechat_agent.perception.window import WeChatWindow
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -127,3 +127,44 @@ def test_switch_session_failure_when_foreground_fails(tmp_path: Path) -> None:
     )
     with pytest.raises(WindowNotForeground):
         perception.switch_session("测试会话")
+
+
+def test_end_hold_at_least_two_seconds() -> None:
+    for _ in range(50):
+        value = _sample_end_hold()
+        assert 2.0 <= value <= 3.1
+
+
+def test_multi_end_hold_longer() -> None:
+    for _ in range(50):
+        value = _sample_end_hold(multi=True)
+        assert 2.8 <= value <= 5.2
+
+
+def test_capture_retries_after_scroll_to_bottom(tmp_path: Path) -> None:
+    perception, driver, _ = _perception(tmp_path=tmp_path, scripted=("旧剪贴板", "", CAPTURED))
+    assert perception.capture("测试会话") == CAPTURED
+    assert len(driver.drags) == 2
+    assert len(driver.scrolls) == 1
+    assert driver.scrolls[0][2] > 0  # 真机实测：正值向消息列表底部滚动
+
+
+def test_multi_mode_prescrolls_bottom(tmp_path: Path) -> None:
+    text = BASE_TEXT.replace("from: {x: 0.94, y: 0.14}", "from: {x: 0.08, y: 0.98}")
+    text = text.replace("to: {x: 0.06, y: 0.92}", "to: {x: 0.90, y: 0.00}")
+    text = text.replace("data_dir: ./data", f"data_dir: {tmp_path.as_posix()}/data", 1)
+    path = tmp_path / "multi.yaml"
+    path.write_text(text, encoding="utf-8")
+    cfg = load_config(path)
+    tree = FakeElementTree(element_rects={"message_area": AREA})
+    driver = FakeDriver(scripted=("旧剪贴板", CAPTURED))
+    perception = WeChatPerception(
+        cfg,
+        tree=tree,
+        driver=driver,
+        window=WeChatWindow(cfg, FakeWindowBackend(INFO)),
+        sleep=lambda _s: None,
+    )
+    assert perception.capture("测试会话") == CAPTURED
+    assert driver.scrolls and driver.scrolls[0][2] > 0  # 向下滚到底部
+    assert driver.drags

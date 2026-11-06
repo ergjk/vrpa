@@ -245,6 +245,7 @@ class FakeDriver:
         self.hotkeys: list[tuple[str, ...]] = []
         self.typed: list[str] = []
         self.clipboard_sets: list[str] = []
+        self.scrolls: list[tuple[int, int, int]] = []
 
     def click(self, x: int, y: int) -> None:
         self.clicks.append((x, y))
@@ -265,6 +266,9 @@ class FakeDriver:
 
     def hotkey(self, *keys: str) -> None:
         self.hotkeys.append(tuple(keys))
+
+    def scroll_at(self, x: int, y: int, clicks: int) -> None:
+        self.scrolls.append((x, y, clicks))
 
     def type_text(self, text: str) -> None:
         self.typed.append(text)

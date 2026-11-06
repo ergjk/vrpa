@@ -128,6 +128,7 @@ class CaptureConfig:
     title_verify: str
     restore_clipboard: bool
     switch_delay: float = 0.5
+    scroll_to_bottom_clicks: int = 8
 
 
 @dataclass(frozen=True)
@@ -293,6 +294,7 @@ def parse_capture(raw: Mapping[str, Any]) -> CaptureConfig:
             "title_verify",
             "restore_clipboard",
             "switch_delay",
+            "scroll_to_bottom_clicks",
         ),
         "capture",
     )
@@ -308,6 +310,9 @@ def parse_capture(raw: Mapping[str, Any]) -> CaptureConfig:
     _check_keys(to_raw, ("x", "y"), "capture.drag.to")
     return CaptureConfig(
         switch_delay=_as_float(raw.get("switch_delay", 0.5), "capture.switch_delay", minimum=0.0, maximum=5.0),
+        scroll_to_bottom_clicks=_as_int(
+            raw.get("scroll_to_bottom_clicks", 12), "capture.scroll_to_bottom_clicks", minimum=0, maximum=50
+        ),
         drag=DragConfig(
             from_x=_as_ratio(from_raw.get("x"), "capture.drag.from.x"),
             from_y=_as_ratio(from_raw.get("y"), "capture.drag.from.y"),

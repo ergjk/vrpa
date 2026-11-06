@@ -25,27 +25,30 @@ if TYPE_CHECKING:  # pragma: no cover
 __all__ = ["WeChatPerception"]
 
 # 终点停留：0.3/0.6/0.9 三档按泊松权重抽样，再叠加 ±0.1s 抖动（节奏拟人，非安全边界）
-_HOLD_AFTER_CHOICES = (0.3, 0.6, 0.9)
+_HOLD_AFTER_CHOICES = (2.0, 2.5, 3.0)
+_HOLD_AFTER_MULTI_CHOICES = (3.0, 4.0, 5.0)
 _HOLD_POISSON_LAMBDA = 1.0
 
 
-def _sample_end_hold() -> float:
-    """按泊松分布选择终点停留档位，并加入 ±0.1s 抖动。"""
+def _sample_end_hold(*, multi: bool = False) -> float:
+    """终点停留：普通 2~3s；多条（由下往上/越界）3/4/5s，泊松权重 + 抖动。"""
+    choices = _HOLD_AFTER_MULTI_CHOICES if multi else _HOLD_AFTER_CHOICES
+    jitter = 0.2 if multi else 0.1
     weights = []
-    for index, _choice in enumerate(_HOLD_AFTER_CHOICES, start=1):
+    for index, _choice in enumerate(choices, start=1):
         weight = math.exp(-_HOLD_POISSON_LAMBDA) * (_HOLD_POISSON_LAMBDA**index) / math.factorial(index)
         weights.append(weight)
-    base = random.choices(_HOLD_AFTER_CHOICES, weights=weights, k=1)[0]
-    return round(max(0.15, base + random.uniform(-0.1, 0.1)), 3)
+    base = random.choices(choices, weights=weights, k=1)[0]
+    floor = 3.0 if multi else 2.0
+    return round(max(floor, base + random.uniform(-jitter, jitter)), 3)
 
 
-# 兜底拖拽方案：起点尽量压在左侧（对方）消息气泡上，向右上/上方拖。
-_FALLBACK_DRAG_PLANS: tuple[tuple[tuple[float, float], tuple[float, float]], ...] = (
-    ((0.10, 0.80), (0.92, 0.15)),
-    ((0.10, 0.55), (0.92, 0.20)),
-    ((0.12, 0.35), (0.92, 0.15)),
-    ((0.10, 0.90), (0.92, 0.10)),
-)
+# 首次失败后的恢复轨迹：滚到底部，再从对方气泡下方拖到贴紧上边界。
+_EDGE_DRAG_PLAN: tuple[tuple[float, float], tuple[float, float]] = ((0.08, 0.98), (0.90, 0.00))
+# 恢复重试轨迹：略高起点，避免首条/末条气泡边缘选不中。
+_RETRY_DRAG_PLAN: tuple[tuple[float, float], tuple[float, float]] = ((0.10, 0.80), (0.90, 0.02))
+# 多条采集：终点越界（-5%），配合更长停留，尽量一次划到顶部。
+_EDGE_MULTI_DRAG_PLAN: tuple[tuple[float, float], tuple[float, float]] = ((0.08, 0.98), (0.90, -0.05))
 
 
 class WeChatPerception:
@@ -65,6 +68,7 @@ class WeChatPerception:
         self._driver: Driver = driver or PyAutoGuiDriver()
         self._window = window if window is not None else WeChatWindow(config)
         self._sleep = sleep
+        self.last_capture_info: dict[str, object] = {}
         self._session = WeChatSessionSwitcher(
             config,
             self._tree,
@@ -138,20 +142,48 @@ class WeChatPerception:
             except CopyFailed:
                 previous = ""
 
-        # 真机经验：起点落在气泡间隙/空白处不会触发文本选择。
-        # 首选配置比例，失败后换多个“左侧消息文字附近”的起点重试（无图像识别）。
+        # 真机规则：首次框选失败 -> 先把消息区滚到底部 -> 贴边由下往上重试一次；
+        # 仍失败则放弃（不再盲试多个起点，避免选中旧消息/浪费一轮时间）。
+        multi_message = end[1] < start[1] or drag.to_y < 0 or drag.to_y > 1
+        retry_start = (
+            area.x + int(round(area.width * _RETRY_DRAG_PLAN[0][0])),
+            area.y + int(round(area.height * _RETRY_DRAG_PLAN[0][1])),
+        )
+        retry_end = (
+            area.x + int(round(area.width * _RETRY_DRAG_PLAN[1][0])),
+            area.y + int(round(area.height * _RETRY_DRAG_PLAN[1][1])),
+        )
         attempts: list[tuple[tuple[int, int], tuple[int, int]]] = [(start, end)]
-        for from_ratio, to_ratio in _FALLBACK_DRAG_PLANS:
-            fallback_start = (
-                area.x + int(round(area.width * from_ratio[0])),
-                area.y + int(round(area.height * from_ratio[1])),
-            )
-            fallback_end = (
-                area.x + int(round(area.width * to_ratio[0])),
-                area.y + int(round(area.height * to_ratio[1])),
-            )
-            if (fallback_start, fallback_end) not in attempts:
-                attempts.append((fallback_start, fallback_end))
+        if (retry_start, retry_end) != (start, end):
+            attempts.append((retry_start, retry_end))
+
+        scroll_clicks = int(self._config.capture.scroll_to_bottom_clicks)
+        scroll_count = 0
+        scroll_methods: list[str] = []
+        self.last_capture_info = {
+            "multi": multi_message,
+            "attempts": len(attempts),
+            "scroll_clicks": scroll_clicks,
+            "scroll_count": 0,
+            "scroll_methods": scroll_methods,
+        }
+
+        def _reset_to_bottom() -> None:
+            nonlocal scroll_count
+            if scroll_clicks > 0:
+                self._driver.scroll_at(area.center[0], area.center[1], scroll_clicks)
+                scroll_methods.append("wheel")
+                scroll_count += 1
+                self._sleep(0.4)
+            # 键盘兜底：点击消息区空白处，Ctrl+End 跳到最新
+            self._driver.click(area.x + 12, area.center[1])
+            self._driver.hotkey("ctrl", "end")
+            scroll_methods.append("ctrl+end")
+            self._sleep(0.4)
+
+        if multi_message:
+            # 多条采集先从底部开始：保证最新消息一定在可视区内
+            _reset_to_bottom()
 
         text = ""
         last_sentinel = ""
@@ -167,21 +199,29 @@ class WeChatPerception:
                     duration=attempt_duration,
                     jitter=float(drag.jitter_px),
                     hold_before=float(drag.hold_before),
-                    hold_after=_sample_end_hold(),
+                    hold_after=_sample_end_hold(multi=multi_message),
                 )
                 self._driver.hotkey("ctrl", "c")
                 self._sleep(self._config.capture.copy_wait)
                 candidate = self._driver.clipboard_get()
                 if candidate.strip() and candidate.strip() != last_sentinel:
                     text = candidate
+                    self.last_capture_info["attempt_used"] = index + 1
+                    self.last_capture_info["scroll_count"] = scroll_count
+                    self.last_capture_info["chars"] = len(text)
                     break
+                if index == 0 and len(attempts) > 1:
+                    # 首次没选中：滚到最底部，保证新消息在可视区，再试一次贴边轨迹
+                    _reset_to_bottom()
         finally:
             if previous:
                 self._driver.clipboard_set(previous)
 
         if not text.strip():
+            self.last_capture_info["attempt_used"] = 0
+            self.last_capture_info["scroll_count"] = scroll_count
             raise CopyFailed(
-                "剪贴板为空：Ctrl+C 未产生消息文本（所有框选起点均未命中；"
+                "剪贴板为空：Ctrl+C 未产生消息文本（首次未选中且滚到底部重试仍未命中；"
                 f"message_area={area.as_tuple()}，尝试 {len(attempts)} 组拖拽）",
                 hint="确认消息区有文本消息；用 `probe --chat 会话 --debug` 查看实际拖拽坐标",
             )

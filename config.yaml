@@ -45,6 +45,7 @@ uia_tree:
 # —— 消息流采集（红线：唯一可读消息内容的路径）——
 capture:
   switch_delay: 0.5             # 切会话时每个操作之间的间隔（秒）
+  scroll_to_bottom_clicks: 12   # 多条采集/失败重试时，先把消息区滚到底部
   drag:
     from: {x: 0.94, y: 0.14}     # 相对 message_area 元素的比例（避开滚动条/头像）
     to: {x: 0.06, y: 0.92}

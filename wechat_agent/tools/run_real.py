@@ -14,6 +14,7 @@ import sys
 import time
 from collections.abc import Sequence
 from dataclasses import replace
+from pathlib import Path
 from typing import Any
 
 from vrpa.errors import AgentFrameworkError, ConfigError
@@ -171,6 +172,15 @@ def run_real(args: Any) -> int:
         print("--real 需要 --chat 目标会话", file=sys.stderr)
         return 2
     config = load_config(args.config)
+    from wechat_agent.tools.probe import _with_drag_override
+
+    multi = bool(getattr(args, "multi", False))
+    drag_from = getattr(args, "drag_from", None) or ("0.08,0.98" if multi else None)
+    drag_to = getattr(args, "drag_to", None) or ("0.90,-0.05" if multi else None)
+    drag_duration = getattr(args, "drag_duration", None)
+    if multi and drag_duration is None:
+        drag_duration = 1.4
+    config = _with_drag_override(config, drag_from, drag_to, drag_duration)
     if not config.app.dry_run:
         print("真实 dry-run 要求 dry_run=true；真实发送尚未开放", file=sys.stderr)
         return 2
@@ -186,8 +196,22 @@ def run_real(args: Any) -> int:
             if remaining > 0:
                 print(f"  剩余 {remaining:.0f} 秒…", file=sys.stderr, flush=True)
     warmup_ms = round((time.perf_counter() - warmup_started) * 1000, 1)
+    raw_sink: list[str] = []
+
+    class _CaptureRecorder:
+        def __init__(self, inner: object) -> None:
+            self._inner = inner
+
+        def capture(self, session: str) -> str:
+            raw = self._inner.capture(session)  # type: ignore[attr-defined]
+            raw_sink.append(str(raw))
+            return str(raw)
+
+        def __getattr__(self, name: str) -> object:
+            return getattr(self._inner, name)
+
     try:
-        perception = WeChatPerception(config)
+        perception = _CaptureRecorder(WeChatPerception(config))
         payload = execute_dry_run(
             config,
             perception=perception,
@@ -196,8 +220,16 @@ def run_real(args: Any) -> int:
             force_llm=bool(getattr(args, "llm", False)),
             settle=float(getattr(args, "settle", 1.5)),
         )
+        capture_info = getattr(perception, "last_capture_info", None)
+        if isinstance(capture_info, dict):
+            payload["capture_info"] = capture_info
         payload["timing"]["warmup_ms"] = warmup_ms
         payload["timing"]["total_ms"] = round((time.perf_counter() - started_at) * 1000, 1)
+        if getattr(args, "dump", None):
+            dump_path = Path(str(args.dump))
+            dump_path.parent.mkdir(parents=True, exist_ok=True)
+            dump_path.write_text("\n\n---CAPTURE---\n\n".join(raw_sink), encoding="utf-8")
+            payload["dump"] = str(dump_path)
     except AgentFrameworkError as exc:
         print(f"DRY-RUN ERROR: {exc}", file=sys.stderr)
         return int(exc.exit_code)

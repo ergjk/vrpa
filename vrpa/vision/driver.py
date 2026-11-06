@@ -41,6 +41,10 @@ class Driver(Protocol):
         """组合键，如 hotkey("ctrl", "c")。"""
         ...
 
+    def scroll_at(self, x: int, y: int, clicks: int) -> None:
+        """把鼠标移到 (x,y) 后滚动滚轮（正数向上，负数向下）。"""
+        ...
+
     def type_text(self, text: str) -> None:
         """键入 ASCII 文本（中文走剪贴板粘贴）。"""
         ...
@@ -106,15 +110,21 @@ class PyAutoGuiDriver:
                     duration=max(0.01, duration / total),
                 )
             pyautogui.moveTo(end[0], end[1], duration=max(0.05, duration / total))
+            if hold_after > 0:
+                time.sleep(hold_after)  # 按住鼠标在终点停留，再松开
         finally:
             pyautogui.mouseUp()
-        if hold_after > 0:
-            time.sleep(hold_after)
 
     def hotkey(self, *keys: str) -> None:
         import pyautogui
 
         pyautogui.hotkey(*keys)
+
+    def scroll_at(self, x: int, y: int, clicks: int) -> None:
+        import pyautogui
+
+        pyautogui.moveTo(x, y, duration=self._pause)
+        pyautogui.scroll(int(clicks))
 
     def type_text(self, text: str) -> None:
         import pyautogui
