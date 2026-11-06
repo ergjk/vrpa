@@ -8,24 +8,24 @@
 
 | 层 | 包 | 职责 | 允许依赖 |
 |---|---|---|---|
-| 框架底座 | `dsh_rpa` | 配置内核、日志与审计、异常与退出码、端口协议（Ports）、DTO、平台适配器契约与注册表、CLI 骨架、测试工具（Fakes/Contracts） | **仅标准库** |
-| 微信应用 | `wechat_agent` | 微信适配器（顶层窗口/假 UIA 树/锚点匹配/框选采集/解析）+ 记忆/推理/执行/控制/插件 + 组装入口 | `dsh_rpa` + RPA/LLM 第三方库 |
+| 框架底座 | `vrpa` | 配置内核、日志与审计、异常与退出码、端口协议（Ports）、DTO、平台适配器契约与注册表、CLI 骨架、测试工具（Fakes/Contracts） | **仅标准库** |
+| 微信应用 | `wechat_agent` | 微信适配器（顶层窗口/假 UIA 树/锚点匹配/框选采集/解析）+ 记忆/推理/执行/控制/插件 + 组装入口 | `vrpa` + RPA/LLM 第三方库 |
 | 工具与文档 | `tests/`、`scripts/`、`docs/` | 测试、质量门禁、ADR 与指南 | 两者 |
 
 依赖方向（单向，禁止反向与横向）：
 
 ```
-tests  ->  wechat_agent  ->  dsh_rpa  ->  stdlib
+tests  ->  wechat_agent  ->  vrpa  ->  stdlib
 ```
 
-- `dsh_rpa` 内**不得** import `wechat_agent`；
+- `vrpa` 内**不得** import `wechat_agent`；
 - `wechat_agent` 内不得再出现「平台无关能力」的私有实现（配置加载/日志/异常/CLI 骨架必须用框架能力）；
 - F-04 起由自动测试强制（import 边界扫描 + 平台名扫描）。
 
 ## 2. 目标目录树
 
 ```
-dsh_rpa/                       # 框架底座（可独立发布为 dsh-rpa）
+vrpa/                       # 框架底座（可独立发布为 vrpa）
 ├── __init__.py                #   __version__ / INTERFACE_VERSION
 ├── config/                    #   通用配置：加载(YAML/.env)、校验、合并、schema 版本
 ├── logging.py                 #   日志/审计/trace_id/脱敏（名字空间中性）
@@ -46,16 +46,16 @@ wechat_agent/                  # 微信应用 + 微信适配器
 
 ## 3. 平台无关性红线（框架包）
 
-1. `dsh_rpa` 的**标识符与默认值**不得含平台名（`wechat` / `qq` / `dingtalk` …），只允许出现在文档字符串举例中；
+1. `vrpa` 的**标识符与默认值**不得含平台名（`wechat` / `qq` / `dingtalk` …），只允许出现在文档字符串举例中；
 2. 平台差异只能通过 `PlatformAdapter` 实现 + 配置插件注入；
-3. 日志/错误/CLI 的名字空间、环境变量前缀、提示文案一律中性化（`DSH_RPA_*`）。
+3. 日志/错误/CLI 的名字空间、环境变量前缀、提示文案一律中性化（`VRPA_*`）。
 
 ## 4. 关键契约（F-02 ~ F-04 落地）
 
 - **Ports**：`ElementTree`（元素定位，失败即中止）、`Perception`（会话切换 + 采集）、`Executor`（发送 + 三校验）、`Brain`（推理）、`MemoryStore`（双库门面）；
 - **PlatformAdapter**：`kind` / `capabilities` / `create_perception()` / `create_element_tree()` / `create_parser()` / `create_session_switcher()` / `config_schema()`；
 - **AdapterRegistry**：`register(adapter_cls)` / `create(kind, config)`；未知平台给可读错误；
-- **Contracts kit**：`dsh_rpa.testing.contracts.run_all(adapter_factory)`，覆盖端口行为、失败语义（不得兜底猜坐标）、消息流边界（图像识别不得出现在消息路径）。
+- **Contracts kit**：`vrpa.testing.contracts.run_all(adapter_factory)`，覆盖端口行为、失败语义（不得兜底猜坐标）、消息流边界（图像识别不得出现在消息路径）。
 
 「可替换感知层」的判定标准：**第三方适配器能通过 contracts kit 全绿**，而不是文档上说"支持"。
 
@@ -64,7 +64,7 @@ wechat_agent/                  # 微信应用 + 微信适配器
 | 项 | 策略 |
 |---|---|
 | 旧模块路径 `wechat_agent.core.*` | 保留 shim 模块，re-export 框架符号；首次导出打 `DeprecationWarning`，下一里程碑删除 |
-| 环境变量 | `WECHAT_AGENT_*` 与新 `DSH_RPA_*` 并存一个版本；同时设置时新名优先 |
+| 环境变量 | `WECHAT_AGENT_*` 与新 `VRPA_*` 并存一个版本；同时设置时新名优先 |
 | 配置 | schema v1（`wechat:` 段）自动升级为 v2（`platform:` 段），升级时打印迁移提示 |
 | 类名 | `WeChatAgentError` 保留为 `AgentFrameworkError` 的别名 |
 | 接口 | `INTERFACE_VERSION` 语义化；破坏性变更必须升主版本并提供迁移说明 |
@@ -75,7 +75,7 @@ wechat_agent/                  # 微信应用 + 微信适配器
 |---|---|---|---|
 | 静态检查 | `ruff check`（E/F/I/UP/B/SIM） | 全仓库 | 0 问题 |
 | 格式化 | `ruff format --check` | 全仓库 | 无差异 |
-| 类型 | `mypy --strict` | `dsh_rpa`（F-02 起） | 0 error |
+| 类型 | `mypy --strict` | `vrpa`（F-02 起） | 0 error |
 | 测试 | `pytest` | `tests/` | 全绿 |
 | 覆盖率 | `pytest-cov` | 两包整体 | ≥ 85%（框架部分后续提高） |
 | 一键 | `scripts\quality.bat`（推荐，自动绕过 PS 执行策略）/ `scripts/quality.ps1` | — | `QUALITY GATE: PASS` |
@@ -85,8 +85,8 @@ wechat_agent/                  # 微信应用 + 微信适配器
 | 子里程碑 | 内容 | 完成判据 |
 |---|---|---|
 | **M0-F-01（本轮）** | ADR 0001-0003、本文档、适配器指南、`pyproject.toml`、`scripts/quality.ps1`、`CHANGELOG.md` | 82 测试全绿；ruff/format 通过；覆盖率 ≥ 85% |
-| M0-F-02 | `dsh_rpa` 包：logging / errors / config 内核迁移 + `wechat_agent.core.*` shim | 旧 import 全部可用且打 warning；新包测试通过；mypy strict 生效 |
-| M0-F-03 | 配置 schema v2：`platform:` 命名空间 + 插件式校验 + `DSH_RPA_*` | 旧 `wechat:` 配置自动升级；`selftest` 输出平台信息 |
+| M0-F-02 | `vrpa` 包：logging / errors / config 内核迁移 + `wechat_agent.core.*` shim | 旧 import 全部可用且打 warning；新包测试通过；mypy strict 生效 |
+| M0-F-03 | 配置 schema v2：`platform:` 命名空间 + 插件式校验 + `VRPA_*` | 旧 `wechat:` 配置自动升级；`selftest` 输出平台信息 |
 | M0-F-04 | `ports.py` / `platform.py` / `AdapterRegistry` / `testing.contracts` / `testing.fakes` | contracts kit 可运行；Fake 适配器全绿 |
 | M0-F-05 | 微信适配器注册 + 应用层去框架化（memory/brain/act/control 接 ports） | M1/M2 实现类可注入 Mock；import 边界测试通过 |
 | M0-F-06 | 弃用清理、指南定稿、README/CHANGELOG 更新 | 无 DeprecationWarning；文档评审通过 |

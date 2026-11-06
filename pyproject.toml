@@ -41,7 +41,7 @@ dev = [
 wechat-agent = "wechat_agent.main:main"
 
 [tool.setuptools.packages.find]
-include = ["wechat_agent*", "dsh_rpa*"]
+include = ["wechat_agent*", "vrpa*", "dsh_rpa*"]
 exclude = ["tests*", "data*", "docs*", "scripts*"]
 
 # ---------------------------------------------------------------- ruff
@@ -68,12 +68,12 @@ addopts = "-ra"
 # M0-F-02 起旧模块路径（wechat_agent.core.*）保留 shim 并打 DeprecationWarning；
 # 测试内部会正常导入这些 shim，属于预期行为，这里显式过滤保持输出纯净。
 filterwarnings = [
-  "ignore:.*已迁移到 dsh_rpa.*:DeprecationWarning",
+  "ignore:.*(已迁移到 vrpa|已更名为 vrpa).*:DeprecationWarning",
 ]
 
 # ---------------------------------------------------------------- coverage
 [tool.coverage.run]
-source = ["wechat_agent", "dsh_rpa"]
+source = ["wechat_agent", "vrpa", "dsh_rpa"]
 branch = true
 omit = [
   "*/__main__.py",
@@ -89,12 +89,12 @@ exclude_also = [
 ]
 
 # ---------------------------------------------------------------- mypy
-# F-02 起生效：dsh_rpa 框架包必须 mypy strict 通过。
-# dsh_rpa 落地前，门禁脚本自动跳过并提示，不会产生假绿。
+# F-02 起生效：vrpa 框架包必须 mypy strict 通过。
+# vrpa 落地前，门禁脚本自动跳过并提示，不会产生假绿。
 [tool.mypy]
 python_version = "3.10"
 strict = true
-files = ["dsh_rpa"]
+files = ["vrpa"]
 warn_unreachable = true
 show_error_codes = true
 pretty = true

@@ -155,7 +155,7 @@ V1.0 必需元素：`main_window`、`message_area`（仅提供框选拖拽坐标
 | [README.md](README.md) | 项目总览、六层架构、感知层规范、红线 | 本文件 |
 | [docs/技术方案-V1.0.md](docs/技术方案-V1.0.md) | 详细技术设计：配置、双库 DDL、假 UIA 树算法、去重算法、队列/延迟、控制台、异常、测试策略、风险 | 设计稿 |
 | [docs/行动清单-V1.0.md](docs/行动清单-V1.0.md) | 施工图：M0~M6 全量任务（任务描述 / 输入输出 / DoD）、阶段门禁、前置阻塞项 | M0-01~06 已完成 |
-| [docs/architecture.md](docs/architecture.md) | 目标架构：双包分层（dsh_rpa + wechat_agent）、依赖规则、M0-F 迁移路线 | Accepted |
+| [docs/architecture.md](docs/architecture.md) | 目标架构：双包分层（vrpa + wechat_agent）、依赖规则、M0-F 迁移路线 | Accepted |
 | [docs/ADR/](docs/ADR/) | ADR-0001 框架分层 / ADR-0002 配置 schema v2 / ADR-0003 接口稳定与适配器契约 | Accepted |
 | [docs/writing-an-adapter.md](docs/writing-an-adapter.md) | 第三方平台适配器编写指南（QQ / 钉钉复用入口） | 草案 |
 | [CHANGELOG.md](CHANGELOG.md) | 版本变更记录（Keep a Changelog） | 维护中 |

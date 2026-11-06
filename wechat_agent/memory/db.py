@@ -28,7 +28,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from dsh_rpa.errors import DBError
+from vrpa.errors import DBError
 
 SCHEMA_VERSION = 1
 SCHEMA_FILE = Path(__file__).with_name("schema.sql")

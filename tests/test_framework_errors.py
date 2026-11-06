@@ -1,4 +1,4 @@
-"""M0-F-02 框架异常测试（dsh_rpa.errors）。
+"""M0-F-02 框架异常测试（vrpa.errors）。
 
 覆盖：框架基类、退出码映射、SessionSwitchFailed 语义、to_dict 脱敏、
 平台无关性（框架包不得出现平台名 / 不得 import 应用层）。
@@ -11,8 +11,8 @@ from pathlib import Path
 
 import pytest
 
-from dsh_rpa import INTERFACE_VERSION, __version__
-from dsh_rpa.errors import (
+from vrpa import INTERFACE_VERSION, __version__
+from vrpa.errors import (
     ERROR_CLASSES,
     EXIT_CODE_MAP,
     AgentFrameworkError,
@@ -36,7 +36,7 @@ from dsh_rpa.errors import (
     format_exception_chain,
 )
 
-PACKAGE_DIR = Path(__file__).resolve().parents[1] / "dsh_rpa"
+PACKAGE_DIR = Path(__file__).resolve().parents[1] / "vrpa"
 
 EXPECTED_EXIT_CODES: dict[type[AgentFrameworkError], int] = {
     UsageError: 2,

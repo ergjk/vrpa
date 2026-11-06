@@ -14,12 +14,14 @@
 
 ## 决策
 
-1. 仓库采用**双顶层包**：`dsh_rpa`（平台无关框架底座，仅标准库依赖）+ `wechat_agent`（微信应用与适配器）；
-2. 依赖单向：`wechat_agent -> dsh_rpa -> stdlib`；`dsh_rpa` 禁止 import 应用层；
+1. 仓库采用**双顶层包**：`vrpa`（平台无关框架底座，仅标准库依赖）+ `wechat_agent`（微信应用与适配器）；
+2. 依赖单向：`wechat_agent -> vrpa -> stdlib`；`vrpa` 禁止 import 应用层；
 3. 平台差异由 `PlatformAdapter` 协议 + `AdapterRegistry` + 平台配置插件表达；
-4. 「可替换感知层」以**适配器合规测试套件**（`dsh_rpa.testing.contracts`）为强制判定标准；
+4. 「可替换感知层」以**适配器合规测试套件**（`vrpa.testing.contracts`）为强制判定标准；
 5. 迁移采用**兼容 shim + 弃用告警**，旧路径/旧类名/旧环境变量保留一个版本；
 6. 质量门禁（ruff / ruff format / mypy strict / pytest / coverage ≥ 85%）在 M0-F-01 即生效。
+
+6. （2026-11-06 主控官决定）框架包名由 `dsh_rpa` 正式更名为 **`vrpa`（Vision RPA）**；旧包名保留兼容 shim（DeprecationWarning），计划 M0-F-06 移除；环境变量统一 `VRPA_*`，旧 `DSH_RPA_*` / `WECHAT_AGENT_*` 作为回退。
 
 ## 备选方案与被否原因
 

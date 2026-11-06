@@ -1,18 +1,18 @@
 # 编写平台适配器（QQ / 钉钉 / 其他 RPA 场景）
 
-> 状态：草案（M0-F-01）；F-04 起随 `dsh_rpa.testing.contracts` 发布而定稿。
-> 目标：任何人按本指南实现适配器 + 通过合规测试，即可把 `dsh_rpa` 底座复用到新平台。
+> 状态：草案（M0-F-01）；F-04 起随 `vrpa.testing.contracts` 发布而定稿。
+> 目标：任何人按本指南实现适配器 + 通过合规测试，即可把 `vrpa` 底座复用到新平台。
 
 ## 0. 适配器 = 平台差异的唯一载体
 
-框架底座（`dsh_rpa`）不包含任何平台名。新增平台只需：
+框架底座（`vrpa`）不包含任何平台名。新增平台只需：
 
 1. 实现五个端口（Ports）；
 2. 提供平台配置校验器；
 3. 提供元素树 profile 规范与校准工具；
 4. 提供消息解析策略包；
 5. 实现 `PlatformAdapter` 并注册；
-6. 通过 `dsh_rpa.testing.contracts.run_all()`；
+6. 通过 `vrpa.testing.contracts.run_all()`；
 7. 补充平台文档（示例配置 / 校准步骤 / 已知限制 / 风控声明）。
 
 ## 1. 能力矩阵（先声明，再实现）
@@ -60,7 +60,7 @@ CAPABILITIES = frozenset({"group_chat", "text_only"})  # 例：QQ 群聊纯文�
 ## 5. 注册与装配
 
 ```python
-from dsh_rpa.platform import AdapterRegistry
+from vrpa.platform import AdapterRegistry
 from myqq.adapter import QQAdapter
 
 registry = AdapterRegistry()
@@ -74,7 +74,7 @@ adapter = registry.create("qq", config.platform)
 
 ```powershell
 python -m pytest tests -q
-python -m dsh_rpa.testing.contracts --adapter myqq.adapter:QQAdapter   # F-04 起提供
+python -m vrpa.testing.contracts --adapter myqq.adapter:QQAdapter   # F-04 起提供
 ```
 
 ## 7. 平台文档模板

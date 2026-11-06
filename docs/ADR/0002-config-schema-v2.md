@@ -29,8 +29,8 @@ platform:
 要点：
 
 1. **框架内核只校验通用段**；`platform.options` 交给 `PlatformAdapter.config_schema()` 返回的校验器；
-2. 环境变量前缀统一为 `DSH_RPA_*`；旧 `WECHAT_AGENT_*` 保留一个版本，新名优先，读取旧名时打 `DeprecationWarning`；
-3. 默认配置路径支持 `DSH_RPA_CONFIG`，旧 `WECHAT_AGENT_CONFIG` 兼容；
+2. 环境变量前缀统一为 `VRPA_*`；旧 `WECHAT_AGENT_*` 保留一个版本，新名优先，读取旧名时打 `DeprecationWarning`；
+3. 默认配置路径支持 `VRPA_CONFIG`，旧 `WECHAT_AGENT_CONFIG` 兼容；
 4. `schema: 1` 配置在加载时**内存内自动升级**为 v2 并打印迁移提示；提供 `config upgrade` 子命令在 F-03 写回文件；
 5. `selftest` 输出新增平台信息（kind / adapter 版本 / 能力矩阵）。
 
@@ -43,7 +43,7 @@ platform:
 
 ## 影响文件
 
-`wechat_agent/core/config.py`（拆分：通用内核 -> `dsh_rpa/config/`；平台字段 -> `wechat_agent/config/wechat_schema.py`）、
+`wechat_agent/core/config.py`（拆分：通用内核 -> `vrpa/config/`；平台字段 -> `wechat_agent/config/wechat_schema.py`）、
 `config.yaml`、`tests/test_config.py`、`README.md`（配置示例）。
 
 ## 风险

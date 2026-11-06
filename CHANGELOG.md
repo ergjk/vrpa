@@ -5,24 +5,27 @@
 
 ## [Unreleased]
 
+### Changed
+- 框架包名由 `dsh_rpa` 正式更名为 **`vrpa`（Vision RPA）**；旧包名保留兼容 shim（DeprecationWarning）；环境变量统一 `VRPA_*`，兼容 `DSH_RPA_*` / `WECHAT_AGENT_*` 回退
+
 ### Added
-- M0-F-02 `dsh_rpa` 框架包落地：
-  - `dsh_rpa/__init__.py`：框架版本 `__version__` 与契约版本 `INTERFACE_VERSION = "1.0"`
-  - `dsh_rpa/logging.py`：命名空间可配置的日志/审计/trace_id/脱敏/自检（默认中性名 `dsh_rpa`）
-  - `dsh_rpa/errors.py`：平台无关异常族（基类 `AgentFrameworkError`、`SessionSwitchFailed`）
+- M0-F-02 `vrpa` 框架包落地：
+  - `vrpa/__init__.py`：框架版本 `__version__` 与契约版本 `INTERFACE_VERSION = "1.0"`
+  - `vrpa/logging.py`：命名空间可配置的日志/审计/trace_id/脱敏/自检（默认中性名 `vrpa`）
+  - `vrpa/errors.py`：平台无关异常族（基类 `AgentFrameworkError`、`SessionSwitchFailed`）
   - `scripts/quality.bat`：绕过 PowerShell 执行策略的一键门禁入口
 - 框架测试：`tests/test_framework_errors.py`、`tests/test_framework_logging.py`、`tests/test_deprecation.py`
 
 ### Changed
-- `wechat_agent/main.py`、`core/config.py`、`memory/db.py` 改为直接使用 `dsh_rpa.*`（应用内部不再依赖 shim）
+- `wechat_agent/main.py`、`core/config.py`、`memory/db.py` 改为直接使用 `vrpa.*`（应用内部不再依赖 shim）
 - 预留旧名别名：`WeChatAgentError = AgentFrameworkError`、`ChatSwitchFailed = SessionSwitchFailed`
-- 启用 mypy strict（`dsh_rpa` 3 个文件 0 error）；覆盖率门禁提升到 87%+
+- 启用 mypy strict（`vrpa` 3 个文件 0 error）；覆盖率门禁提升到 87%+
 - 修复 `pyproject.toml` 无效配置 `cache_dir`（pytest 9 告警）
 
 ### Planned
-- M0-F-03：配置 schema v2（`platform:` 命名空间 + 平台插件式校验 + `DSH_RPA_*`）
+- M0-F-03：配置 schema v2（`platform:` 命名空间 + 平台插件式校验 + `VRPA_*`）
 - M0-F-03：配置 schema v2（`platform:` 命名空间 + 平台插件式校验）
-- M0-F-04：`PlatformAdapter` 协议 + 适配器注册表 + 合规测试套件 `dsh_rpa.testing.contracts`
+- M0-F-04：`PlatformAdapter` 协议 + 适配器注册表 + 合规测试套件 `vrpa.testing.contracts`
 - M0-F-05：微信适配器注册、应用层去框架化
 - M0-F-06：弃用清理、适配器编写指南定稿
 - M0-07：环境体检 `doctor`

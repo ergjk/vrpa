@@ -1,4 +1,4 @@
-"""M0-F-02 框架日志测试（dsh_rpa.logging）。
+"""M0-F-02 框架日志测试（vrpa.logging）。
 
 覆盖：命名空间注入/恢复与校验、日志格式、trace_id、审计 JSONL、环境变量回退、
 脱敏、self_check。
@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from dsh_rpa.logging import (
+from vrpa.logging import (
     AUDIT_FILE_NAME,
     LOG_FILE_NAME,
     audit,
@@ -36,7 +36,7 @@ from dsh_rpa.logging import (
 def framework_ns():
     """切到框架测试命名空间，结束后恢复（避免污染应用层测试）。"""
     original = get_namespace_config()
-    configure_logging_namespace("dsh_rpa_test", data_dir_env=("DSH_RPA_TEST_DATA",))
+    configure_logging_namespace("vrpa_test", data_dir_env=("VRPA_TEST_DATA",))
     shutdown_logging()
     try:
         yield
@@ -46,9 +46,9 @@ def framework_ns():
 
 
 def test_namespace_configure_and_restore(framework_ns) -> None:
-    assert logger_namespace() == "dsh_rpa_test"
-    assert get_logger("core.test").name == "dsh_rpa_test.core.test"
-    assert get_logger().name == "dsh_rpa_test"
+    assert logger_namespace() == "vrpa_test"
+    assert get_logger("core.test").name == "vrpa_test.core.test"
+    assert get_logger().name == "vrpa_test"
 
 
 def test_namespace_validation(framework_ns) -> None:
@@ -56,7 +56,7 @@ def test_namespace_validation(framework_ns) -> None:
         configure_logging_namespace("   ")
     with pytest.raises(ValueError):
         configure_logging_namespace("x", data_dir_env=())
-    assert logger_namespace() == "dsh_rpa_test"
+    assert logger_namespace() == "vrpa_test"
 
 
 def test_setup_logging_format_with_namespace(tmp_path: Path, framework_ns) -> None:
@@ -66,7 +66,7 @@ def test_setup_logging_format_with_namespace(tmp_path: Path, framework_ns) -> No
     for handler in logger.handlers:
         handler.flush()
     line = (tmp_path / LOG_FILE_NAME).read_text(encoding="utf-8").strip().splitlines()[-1]
-    assert re.match(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} INFO\s+\[deadbeef\] \[dsh_rpa_test\] hello world$", line)
+    assert re.match(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} INFO\s+\[deadbeef\] \[vrpa_test\] hello world$", line)
 
 
 def test_trace_scope_and_redact(framework_ns) -> None:
@@ -87,7 +87,7 @@ def test_trace_scope_and_redact(framework_ns) -> None:
 
 
 def test_audit_uses_namespace_env_fallback(tmp_path: Path, framework_ns, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("DSH_RPA_TEST_DATA", str(tmp_path))
+    monkeypatch.setenv("VRPA_TEST_DATA", str(tmp_path))
     shutdown_logging()  # 重置审计单例，强制走环境变量解析路径
     with trace_scope("12345678"):
         record = audit({"event": "demo"})
@@ -100,7 +100,7 @@ def test_audit_uses_namespace_env_fallback(tmp_path: Path, framework_ns, monkeyp
 
 
 def test_audit_fallback_without_env(tmp_path: Path, framework_ns, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("DSH_RPA_TEST_DATA", raising=False)
+    monkeypatch.delenv("VRPA_TEST_DATA", raising=False)
     monkeypatch.chdir(tmp_path)
     shutdown_logging()
     audit({"event": "fallback"})

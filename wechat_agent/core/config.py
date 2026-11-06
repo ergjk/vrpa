@@ -24,11 +24,12 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-from dsh_rpa.errors import ConfigError
+from vrpa.errors import ConfigError
 
 DEFAULT_CONFIG_NAME = "config.yaml"
 SUPPORTED_SCHEMA = 1
-ENV_CONFIG_OVERRIDE = "WECHAT_AGENT_CONFIG"
+ENV_CONFIG_OVERRIDE = "VRPA_CONFIG"
+ENV_CONFIG_OVERRIDE_LEGACY = ("DSH_RPA_CONFIG", "WECHAT_AGENT_CONFIG")
 ENV_API_KEY = "DEEPSEEK_API_KEY"
 
 _TOP_KEYS = (
@@ -719,8 +720,11 @@ def detect_display() -> DisplayInfo:
 # 对外入口
 # ============================================================================
 def default_config_path() -> Path:
-    override = os.environ.get(ENV_CONFIG_OVERRIDE, "").strip()
-    return Path(override) if override else Path(DEFAULT_CONFIG_NAME)
+    for env_name in (ENV_CONFIG_OVERRIDE, *ENV_CONFIG_OVERRIDE_LEGACY):
+        value = os.environ.get(env_name, "").strip()
+        if value:
+            return Path(value)
+    return Path(DEFAULT_CONFIG_NAME)
 
 
 def load_config(path: str | os.PathLike[str] | None = None) -> Config:
@@ -804,7 +808,7 @@ def _writable(path: Path) -> tuple[bool, str]:
 def _run_logging_self_check(log_dir: Path) -> dict[str, Any]:
     """调用 core.logging.self_check；任何异常降级为一条失败检查，不让 selftest 崩溃。"""
     try:
-        from dsh_rpa.logging import self_check as _self_check
+        from vrpa.logging import self_check as _self_check
 
         return _self_check(log_dir)
     except Exception as exc:  # noqa: BLE001 - 自检必须自身不崩

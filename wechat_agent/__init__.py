@@ -8,7 +8,7 @@
 __version__ = "0.1.0"
 __all__ = ["__version__"]
 
-from dsh_rpa.logging import configure_logging_namespace as _configure_logging_ns
+from vrpa.logging import configure_logging_namespace as _configure_logging_ns
 
-# 应用层注入 logger 命名空间与环境变量优先级（框架默认中性值 dsh_rpa）
-_configure_logging_ns("wechat_agent", data_dir_env=("DSH_RPA_DATA_DIR", "WECHAT_AGENT_DATA_DIR"))
+# 应用层注入 logger 命名空间与环境变量优先级（框架默认中性值 vrpa）
+_configure_logging_ns("wechat_agent", data_dir_env=("VRPA_DATA_DIR", "DSH_RPA_DATA_DIR", "WECHAT_AGENT_DATA_DIR"))

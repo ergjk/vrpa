@@ -1,19 +1,19 @@
-"""DSH-RPA 框架底座（平台无关，仅依赖标准库）。
+"""兼容 shim：框架包已更名为 vrpa（Vision RPA）。
 
-本包是「可替换感知层」的框架层：日志/审计、异常与退出码、以及后续的
-配置内核、端口协议（Ports）、平台适配器契约与合规测试套件。
-
-纪律（M0-F，见 docs/ADR/0001-framework-layering.md）：
-- 只依赖标准库；禁止 import 任何应用层包；
-- 标识符与默认值不得含具体平台名，平台差异由适配器注入；
-- 应用层通过本包的公开 API 使用框架能力，不再复制实现。
+按 ADR-0001 §5 兼容策略，旧包名 `dsh_rpa` 保留一个里程碑，首次导入打 DeprecationWarning。
+弃用计划：M0-F-06 删除；请改用 `import vrpa` / `from vrpa.errors import ...`。
 """
 
 from __future__ import annotations
 
-__version__ = "0.1.0"
+import warnings
 
-# 框架契约版本（语义化 MAJOR.MINOR，见 docs/ADR/0003-interface-stability.md）
-INTERFACE_VERSION = "1.0"
+from vrpa import INTERFACE_VERSION, __version__
+
+warnings.warn(
+    "dsh_rpa 已更名为 vrpa（Vision RPA），请改用 import vrpa；旧包名将在 M0-F-06 移除",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 __all__ = ["INTERFACE_VERSION", "__version__"]

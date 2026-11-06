@@ -14,7 +14,7 @@
 
 ### 1. 版本化契约
 
-- `dsh_rpa.INTERFACE_VERSION` 采用语义化版本（MAJOR.MINOR）：
+- `vrpa.INTERFACE_VERSION` 采用语义化版本（MAJOR.MINOR）：
   - MAJOR：删除/重命名端口方法、改变 DTO 必需字段、改变失败语义；
   - MINOR：新增端口方法（必须带默认实现或标注 optional 能力）、新增 DTO 可选字段；
 - 任何 MAJOR 变更必须：新增 ADR + CHANGELOG 条目 + 迁移说明 + contracts kit 同步升级；
@@ -50,7 +50,7 @@ class PlatformAdapter(Protocol):
 
 ### 4. 合规测试套件（唯一判定标准）
 
-`dsh_rpa.testing.contracts` 提供 `run_all(adapter_factory) -> ContractReport`，至少覆盖：
+`vrpa.testing.contracts` 提供 `run_all(adapter_factory) -> ContractReport`，至少覆盖：
 
 1. 端口存在性与签名（含 keyword-only 参数、返回 DTO 类型）；
 2. 失败语义：定位失败不兜底、发送校验失败不回车、LLM 失败不返回伪造成功；

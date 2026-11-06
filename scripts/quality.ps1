@@ -2,7 +2,7 @@
 .SYNOPSIS
   DSH-WeChat-Agent 质量门禁（M0-F-01）。
 .DESCRIPTION
-  依次执行：ruff check -> ruff format --check -> mypy（dsh_rpa 落地后）-> pytest(+coverage)。
+  依次执行：ruff check -> ruff format --check -> mypy（vrpa 落地后）-> pytest(+coverage)。
   任一步非 0 即整体失败。脚本不执行任何 Git 操作。
   注意：本文件以 UTF-8 BOM 保存，兼容 Windows PowerShell 5.1。
 .PARAMETER Fix
@@ -47,19 +47,19 @@ $formatArgs = @('-m', 'ruff', 'format', '--check', '.')
 if ($Fix) { $formatArgs = @('-m', 'ruff', 'format', '.') }
 Invoke-Step 'ruff format' { & $python @formatArgs }
 
-if (Test-Path (Join-Path $repoRoot 'dsh_rpa')) {
-    Invoke-Step 'mypy (dsh_rpa strict)' { & $python -m mypy }
+if (Test-Path (Join-Path $repoRoot 'vrpa')) {
+    Invoke-Step 'mypy (vrpa strict)' { & $python -m mypy }
 } else {
     Write-Host ''
     Write-Host '=== mypy ===' -ForegroundColor Cyan
-    Write-Host '[SKIP] dsh_rpa 尚未落地（F-02 起强制 strict）' -ForegroundColor Yellow
+    Write-Host '[SKIP] vrpa 尚未落地（F-02 起强制 strict）' -ForegroundColor Yellow
 }
 
 if ($NoCoverage) {
     Invoke-Step 'pytest' { & $python -m pytest tests -q }
 } else {
     $covArgs = @()
-    foreach ($pkg in @('wechat_agent', 'dsh_rpa')) {
+    foreach ($pkg in @('wechat_agent', 'vrpa')) {
         if (Test-Path (Join-Path $repoRoot $pkg)) { $covArgs += "--cov=$pkg" }
     }
     Invoke-Step 'pytest + coverage' {

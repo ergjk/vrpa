@@ -20,7 +20,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import TextIO
 
-from dsh_rpa.errors import (
+from vrpa.errors import (
     AgentFrameworkError,
     ExitCode,
     InternalError,
@@ -157,9 +157,10 @@ def dispatch(argv: Sequence[str]) -> ExitCode:
 
 
 def _debug_enabled() -> bool:
-    debug = os.environ.get("DSH_RPA_DEBUG", "").strip().lower() in {"1", "true", "yes", "on"}
+    debug = os.environ.get("VRPA_DEBUG", "").strip().lower() in {"1", "true", "yes", "on"}
+    ds_legacy = os.environ.get("DSH_RPA_DEBUG", "").strip().lower() in {"1", "true", "yes", "on"}
     legacy = os.environ.get("WECHAT_AGENT_DEBUG", "").strip().lower() in {"1", "true", "yes", "on"}
-    return debug or legacy
+    return debug or ds_legacy or legacy
 
 
 def _print_failure(exc: AgentFrameworkError) -> None:
