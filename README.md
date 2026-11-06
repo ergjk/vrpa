@@ -1,7 +1,7 @@
 # VRPA-WeChat-Agent
 
 > **VRPA（Vision RPA）通用 RPA 框架底座 + 微信参考实现** · MIT License
-> 状态：**M0 ~ M6 全部阶段已完成，真机联调进行中**（微信 4.x / Windows；537 项测试全绿 · 覆盖率 86.88% · ruff / mypy strict 全绿 · 默认 `dry_run`）
+> 状态：**M0 ~ M6 全部阶段已完成，真机联调进行中**（微信 4.x / Windows；537 项测试全绿 · 覆盖率 86.84% · ruff / mypy strict 全绿 · 默认 `dry_run`）
 > M4：队列/拟人延迟/限流/状态机熔断/`--simulate`/接管；M5：OpenAI 兼容客户端（重试+用量）、Prompt 预算裁剪、后处理安全过滤、人设热加载、`llm-ping`。
 
 ---
@@ -272,7 +272,7 @@ python -m mypy                # vrpa 框架包 strict
 | 格式 | ruff format | 全绿 |
 | 类型 | mypy strict（`vrpa`） | 0 error |
 | 测试 | pytest | 537 passed |
-| 覆盖率 | pytest-cov | 86.88%（门禁 ≥85%） |
+| 覆盖率 | pytest-cov | 86.84%（门禁 ≥85%） |
 | 一键 | `scripts\quality.bat` | `QUALITY GATE: PASS` |
 
 ---
