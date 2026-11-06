@@ -183,6 +183,7 @@ python -m wechat_agent db-check
 
 # 4) 视觉校准与自检（微信 4.x）
 python -m wechat_agent calibrate --warmup 10 --elements main_window,chat_title,search_box,message_area,input_box,send_button
+python -m wechat_agent calibrate --append --warmup 10 --elements drag_start_area  # 追加鼠标起点区（文本框区去掉气泡-头像区）
 python -m wechat_agent validate-tree --strict          # 现场自检（真实截屏）
 python -m wechat_agent locate input_box --json         # 打印坐标/分数/缩放
 python -m wechat_agent probe --chat 目标会话 --warmup 5 --debug --dump data/probe_raw.txt  # 真实采集诊断（只读，不落库不回复）
@@ -233,7 +234,7 @@ python -m wechat_agent run --simulate --scenario <场景.json>  # Fake 全链路
 **当前边界**
 
 - 消息流只支持**文本**（含 Unicode emoji 字符）；原生表情包/图片/语音/文件/引用回复不在 V1.0 范围（`text_only`，红线 R3 禁止图像识别）；
-- 真实 dry-run 已接为命令：`run --real --chat 会话 --warmup 8 --settle 3`（真实采集/入库/LLM，不真实发送；单次 `--ticks 1` 只处理 1 条回复，队列剩余属正常）；切会话每个操作间隔由 `capture.switch_delay`（默认 0.5s）控制；`--multi` 多条模式会先滚轮向下 + `Ctrl+End` 回底，再从消息区头像列顶部贴边向下越界框选（横向覆盖头像/气泡区），终点按住停留 3/5 秒随机（普通模式 2~3s），输出 `capture_info`（尝试次数/滚动方式/命中尝试）；首次失败会回底并换轨迹重试一次；去重允许跳过库尾部不在本次窗口内的消息（如 dry-run 未发送的 out）；
+- 真实 dry-run 已接为命令：`run --real --chat 会话 --warmup 8 --settle 3`（真实采集/入库/LLM，不真实发送；单次 `--ticks 1` 只处理 1 条回复，队列剩余属正常）；切会话每个操作间隔由 `capture.switch_delay`（默认 0.5s）控制；`--multi` 多条模式会先滚轮向下 + `Ctrl+End` 回底，再从“鼠标起点区”（`drag_start_area`，文本框区去掉气泡-头像区后的空白带）顶部向下越界采集；终点按住停留 3/5 秒随机（普通模式 2~3s），输出 `capture_info`（尝试次数/滚动方式/命中尝试）；首次失败会回底并换轨迹重试一次；去重允许跳过库尾部不在本次窗口内的消息（如 dry-run 未发送的 out）；
 - 人手化拖拽/停留为 **V1.0 启发式**（时长、抖动、泊松停留），仅作节奏过渡；V1.2 计划用授权采样学习真人节奏（不记录消息内容）。
 
 ### 6.2 VRPA 适配器快速开始（QQ / 钉钉 / 其他平台）

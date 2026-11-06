@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from pathlib import Path
 
 import pytest
@@ -168,3 +169,29 @@ def test_multi_mode_prescrolls_bottom(tmp_path: Path) -> None:
     assert perception.capture("测试会话") == CAPTURED
     assert driver.scrolls and driver.scrolls[0][2] > 0  # 向下滚到底部
     assert driver.drags
+
+
+def test_capture_uses_drag_start_area(tmp_path: Path) -> None:
+    cfg = _config(tmp_path)
+    drag = dataclasses.replace(cfg.capture.drag, from_x=0.02, from_y=0.01, to_x=0.95, to_y=1.03)
+    cfg = dataclasses.replace(cfg, capture=dataclasses.replace(cfg.capture, drag=drag))
+    start_area = Rect(220, 100, 120, 40)
+    tree = FakeElementTree(
+        element_rects={
+            "message_area": AREA,
+            "search_box": Rect(0, 0, 10, 10),
+            "chat_title": Rect(0, 0, 5, 5),
+            "drag_start_area": start_area,
+        }
+    )
+    driver = FakeDriver(scripted=("旧剪贴板", CAPTURED))
+    perception = WeChatPerception(
+        cfg,
+        tree=tree,
+        driver=driver,
+        window=WeChatWindow(cfg, FakeWindowBackend(INFO)),
+        sleep=lambda _s: None,
+    )
+    assert perception.capture("测试会话") == CAPTURED
+    assert driver.drags[0][0] == (start_area.center[0], start_area.y + 2)
+    assert perception.last_capture_info["start_source"] == "drag_start_area"

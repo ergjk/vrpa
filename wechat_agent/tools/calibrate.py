@@ -43,6 +43,7 @@ def _parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--export", dest="export_path", default=None, help="导出校准包到目录")
     parser.add_argument("--parent", action="append", default=[], help="父子关系：child=parent（可多次）")
     parser.add_argument("--force", action="store_true", help="覆盖已存在的 profile")
+    parser.add_argument("--append", action="store_true", help="向已有 profile 追加元素（不覆盖其他元素）")
     parser.add_argument("--image", default=None, help="离线模式截图（PNG/JPG）")
     parser.add_argument("--rects", default=None, help="离线模式矩形：id=x,y,w,h;id2=...")
     parser.add_argument(
@@ -84,7 +85,7 @@ def _parse_parents(items: Sequence[str]) -> dict[str, str]:
     return parents
 
 
-_CONTAINER_ELEMENTS = frozenset({"main_window", "message_area"})
+_CONTAINER_ELEMENTS = frozenset({"main_window", "message_area", "drag_start_area"})
 
 _ELEMENT_HINTS: dict[str, str] = {
     "main_window": "整个微信主窗口",
@@ -93,6 +94,7 @@ _ELEMENT_HINTS: dict[str, str] = {
     "message_area": "中间消息列表区域（标题下、输入框上）",
     "input_box": "底部文本输入框",
     "send_button": "底部「发送」按钮",
+    "drag_start_area": "鼠标起点区（文本框区去掉气泡-头像区后的空白带，框选顶部起始带）",
 }
 
 
@@ -332,8 +334,12 @@ def run_calibrate(argv: Sequence[str]) -> int:
     try:
         config = load_config(args.config)
         profile_path = config.profile_path()
-        if profile_path.is_file() and not args.force:
-            print(f"profile 已存在：{profile_path}（如需覆盖请加 --force）", file=sys.stderr)
+        append = bool(getattr(args, "append", False))
+        if append and not profile_path.is_file():
+            print("--append 需要已存在的 profile；首次请正常校准", file=sys.stderr)
+            return 2
+        if profile_path.is_file() and not args.force and not append:
+            print(f"profile 已存在：{profile_path}（如需覆盖请加 --force，追加请用 --append）", file=sys.stderr)
             return 2
 
         screen = ImageScreenSource.from_file(args.image) if args.image is not None else AutoScreenSource()
@@ -365,7 +371,10 @@ def run_calibrate(argv: Sequence[str]) -> int:
                 remaining -= 1.0
                 if remaining > 0:
                     print(f"  剩余 {remaining:.0f} 秒…", flush=True)
-            print("开始截屏，请按终端顺序依次框选 6 个元素（截图已冻结，框选不限时）", flush=True)
+            print(
+                f"开始截屏，请按终端顺序依次框选 {len(elements)} 个元素（截图已冻结，框选不限时）",
+                flush=True,
+            )
 
         pending = list(elements)
         while pending:
@@ -388,7 +397,27 @@ def run_calibrate(argv: Sequence[str]) -> int:
             if not progressed:
                 print(f"父元素未校准/循环依赖：{pending}", file=sys.stderr)
                 return 2
+        old_profile = None
+        backup = None
+        if append:
+            import shutil
+
+            from vrpa.vision.profile import load_profile
+
+            backup = profile_path.with_name(profile_path.name + f".bak_{int(time.time())}")
+            shutil.copy2(profile_path, backup)
+            old_profile = load_profile(profile_path, anchors_root=config.profile_anchors_dir())
         result = session.finalize()
+        if append and old_profile is not None:
+            import dataclasses
+
+            from vrpa.vision.profile import save_profile
+
+            merged_elements = dict(old_profile.elements)
+            merged_elements.update(result.profile.elements)
+            merged = dataclasses.replace(result.profile, elements=merged_elements)
+            save_profile(merged, profile_path)
+            print(f"[APPEND] {len(result.profile.elements)} 个元素已合并，旧 profile 备份：{backup}")
     except TreeConfigError as exc:
         print(f"CALIBRATE ERROR: {exc}", file=sys.stderr)
         return 3

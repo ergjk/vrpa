@@ -146,6 +146,16 @@ class WeChatPerception:
         # 真机规则：首次框选失败 -> 先把消息区滚到底部 -> 贴边由下往上重试一次；
         # 仍失败则放弃（不再盲试多个起点，避免选中旧消息/浪费一轮时间）。
         multi_message = end[1] < start[1] or drag.from_y < 0 or drag.from_y > 1 or drag.to_y < 0 or drag.to_y > 1
+        start_source = "config"
+        if multi_message:
+            try:
+                start_area = self._tree.locate("drag_start_area")
+            except (ElementNotVisible, TreeConfigError):
+                start_area = None
+            if start_area is not None:
+                # 起点区顶部中点：贴近上边界，又不落在气泡/头像内部
+                start = (start_area.center[0], start_area.y + 2)
+                start_source = "drag_start_area"
         retry_start = (
             area.x + int(round(area.width * _RETRY_DRAG_PLAN[0][0])),
             area.y + int(round(area.height * _RETRY_DRAG_PLAN[0][1])),
@@ -167,6 +177,7 @@ class WeChatPerception:
             "scroll_clicks": scroll_clicks,
             "scroll_count": 0,
             "scroll_methods": scroll_methods,
+            "start_source": start_source,
         }
 
         def _reset_to_bottom() -> None:

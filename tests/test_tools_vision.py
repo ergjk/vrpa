@@ -254,3 +254,27 @@ def test_display_rect_maps_back_to_original_pixels() -> None:
     assert rect.as_tuple() == (20, 40, 200, 100)
     clamped = _display_to_image_rect(90, 90, 120, 120, scale=1.0, image_w=100, image_h=100)
     assert clamped.as_tuple() == (90, 90, 10, 10)
+
+
+def test_calibrate_append_start_area(workspace: dict[str, Path]) -> None:
+    assert _calibrate(workspace) == 0
+    profile = workspace["tmp"] / "data" / "uia_tree" / "600x400@1.json"
+    assert (
+        run_calibrate(
+            [
+                "--config",
+                str(workspace["config"]),
+                "--append",
+                "--elements",
+                "drag_start_area",
+                "--image",
+                str(workspace["image"]),
+                "--rects",
+                "drag_start_area=20,20,200,30",
+            ]
+        )
+        == 0
+    )
+    data = json.loads(profile.read_text(encoding="utf-8"))
+    assert "drag_start_area" in data["elements"]
+    assert "main_window" in data["elements"] and "input_box" in data["elements"]
