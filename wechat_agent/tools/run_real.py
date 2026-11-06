@@ -17,7 +17,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from vrpa.errors import AgentFrameworkError, ConfigError
+from vrpa.errors import AgentFrameworkError, ConfigError, CopyFailed
 from vrpa.memory.db import init_databases
 from vrpa.memory.history import HistoryStore
 from vrpa.memory.store import SQLiteMemoryStore
@@ -52,6 +52,42 @@ class EchoBrain:
 
     def ping(self) -> float:
         return 0.0
+
+
+class _GuardedPerception:
+    """包裹真实感知：采集窗口落后于库内最新消息时，回底重采，避免旧消息重复入库。"""
+
+    def __init__(self, inner: Any, history: Any, parser: Any, *, max_attempts: int = 3) -> None:
+        self._inner = inner
+        self._history = history
+        self._parser = parser
+        self._max_attempts = max_attempts
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._inner, name)
+
+    def _latest_db_ts(self, chat: str) -> str | None:
+        if self._history.get_chat(chat) is None:
+            return None
+        records = self._history.recent(chat, 200)
+        values = [str(r.ts) for r in records if r.direction == "in" and r.ts]
+        return max(values) if values else None
+
+    def capture(self, chat: str) -> str:
+        latest_db = self._latest_db_ts(chat)
+        last_latest: str | None = None
+        for attempt in range(self._max_attempts):
+            raw = self._inner.capture(chat)  # type: ignore[attr-defined]
+            incoming = self._parser.parse(raw)
+            values = [str(message.ts) for message in incoming if getattr(message, "ts", None)]
+            last_latest = max(values) if values else None
+            if latest_db is None or last_latest is None or last_latest >= latest_db:
+                return str(raw)
+            if attempt < self._max_attempts - 1:
+                self._inner.scroll_to_bottom()  # type: ignore[attr-defined]
+        raise CopyFailed(
+            f"采集窗口停留在旧消息（最新解析={last_latest}，库内最新={latest_db}；已回底重试 {self._max_attempts} 次）"
+        )
 
 
 def _permissive_scheduler(config: Any) -> Scheduler:
@@ -109,10 +145,12 @@ def execute_dry_run(
             mode = "injected"
 
         executor = WeChatExecutor(config, allow_real_send=False)
+        parser = WeChatParser()
+        guarded = _GuardedPerception(perception, history, parser)
         orchestrator = Orchestrator(
             config,
-            perception=perception,
-            parser=WeChatParser(),
+            perception=guarded,
+            parser=parser,
             pipeline=pipeline,
             brain=brain,
             executor=executor,

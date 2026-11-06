@@ -1,7 +1,7 @@
 # VRPA-WeChat-Agent
 
 > **VRPA（Vision RPA）通用 RPA 框架底座 + 微信参考实现** · MIT License
-> 状态：**M0 ~ M6 全部阶段已完成，真机联调进行中**（微信 4.x / Windows；545 项测试全绿 · 覆盖率 86.75% · ruff / mypy strict 全绿 · 默认 `dry_run`）
+> 状态：**M0 ~ M6 全部阶段已完成，真机联调进行中**（微信 4.x / Windows；546 项测试全绿 · 覆盖率 86.53% · ruff / mypy strict 全绿 · 默认 `dry_run`）
 > M4：队列/拟人延迟/限流/状态机熔断/`--simulate`/接管；M5：OpenAI 兼容客户端（重试+用量）、Prompt 预算裁剪、后处理安全过滤、人设热加载、`llm-ping`。
 
 ---
@@ -100,7 +100,7 @@ vrpa/                     # 通用框架底座（可独立发布/复用）
   ports.py                #   五端口协议 + 跨层 DTO（M0-F-04）
   platform.py             #   PlatformAdapter 协议 + AdapterRegistry（M0-F-04）
   testing/                #   Fakes + contracts 合规测试套件（M0-F-04）
-tests/                    # 545 项测试（配置/日志/异常/接口/双库/CLI/端口/契约/兼容 shim）
+tests/                    # 546 项测试（配置/日志/异常/接口/双库/CLI/端口/契约/兼容 shim）
 docs/                     # 技术方案、行动清单、架构、ADR、适配器指南
 scripts/quality.ps1|.bat  # 一键质量门禁（ruff + mypy strict + pytest + coverage）
 scripts/mouse_record.py   # 真机调试：记录手动拖选鼠标轨迹（用于校准 capture.drag）
@@ -234,7 +234,7 @@ python -m wechat_agent run --simulate --scenario <场景.json>  # Fake 全链路
 **当前边界**
 
 - 消息流只支持**文本**（含 Unicode emoji 字符）；原生表情包/图片/语音/文件/引用回复不在 V1.0 范围（`text_only`，红线 R3 禁止图像识别）；
-- 真实 dry-run 已接为命令：`run --real --chat 会话 --warmup 8 --settle 3`（真实采集/入库/LLM，不真实发送；单次 `--ticks 1` 只处理 1 条回复，队列剩余属正常）；切会话每个操作间隔由 `capture.switch_delay`（默认 0.5s）控制；`--multi` 多条模式会先滚轮向下 + `Ctrl+End` 回底，再从“鼠标起点区”（`drag_start_area`，文本框区去掉气泡-头像区后的空白带）顶部向下越界采集；终点按住停留 3/5 秒随机（普通模式 2~3s），输出 `capture_info`（尝试次数/滚动方式/命中尝试）；首次失败会回底并换轨迹重试一次；去重允许跳过库尾部不在本次窗口内的消息（如 dry-run 未发送的 out）；
+- 真实 dry-run 已接为命令：`run --real --chat 会话 --warmup 8 --settle 3`（真实采集/入库/LLM，不真实发送；单次 `--ticks 1` 只处理 1 条回复，队列剩余属正常）；切会话每个操作间隔由 `capture.switch_delay`（默认 0.5s）控制；`--multi` 多条模式会先滚轮向下 + `PageDown`×5 + `Ctrl+End` 回底，并按 `message_area - (message_area ∩ bubble_avatar_area)` 求起点区后向下越界采集；采集后会对比“解析最新时间 vs 库内最新入向时间”，窗口陈旧则回底重采最多 3 次；终点按住停留 3/5 秒随机（普通模式 2~3s），输出 `capture_info`（尝试次数/滚动方式/命中尝试）；首次失败会回底并换轨迹重试一次；去重允许跳过库尾部不在本次窗口内的消息（如 dry-run 未发送的 out）；
 - 人手化拖拽/停留为 **V1.0 启发式**（时长、抖动、泊松停留），仅作节奏过渡；V1.2 计划用授权采样学习真人节奏（不记录消息内容）。
 
 ### 6.2 VRPA 适配器快速开始（QQ / 钉钉 / 其他平台）
@@ -266,7 +266,7 @@ python -m wechat_agent run --simulate --scenario <场景.json>  # Fake 全链路
 
 ```powershell
 .\scripts\quality.bat          # 一键：ruff check → ruff format → mypy strict → pytest+coverage
-python -m pytest tests -q     # 单元测试（当前 545 passed）
+python -m pytest tests -q     # 单元测试（当前 546 passed）
 python -m mypy                # vrpa 框架包 strict
 ```
 
@@ -275,8 +275,8 @@ python -m mypy                # vrpa 框架包 strict
 | 静态检查 | ruff（E/F/I/UP/B/SIM） | 全绿 |
 | 格式 | ruff format | 全绿 |
 | 类型 | mypy strict（`vrpa`） | 0 error |
-| 测试 | pytest | 545 passed |
-| 覆盖率 | pytest-cov | 86.75%（门禁 ≥85%） |
+| 测试 | pytest | 546 passed |
+| 覆盖率 | pytest-cov | 86.53%（门禁 ≥85%） |
 | 一键 | `scripts\quality.bat` | `QUALITY GATE: PASS` |
 
 ---

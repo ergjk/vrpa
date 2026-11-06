@@ -151,7 +151,7 @@ def test_capture_retries_after_scroll_to_bottom(tmp_path: Path) -> None:
     assert perception.capture("测试会话") == CAPTURED
     assert len(driver.drags) == 2
     assert len(driver.scrolls) == 1
-    assert driver.scrolls[0][2] > 0  # 真机实测：正值向消息列表底部滚动
+    assert driver.scrolls[0][2] < 0  # 负值向消息列表底部滚动
 
 
 def test_multi_mode_prescrolls_bottom(tmp_path: Path) -> None:
@@ -171,7 +171,7 @@ def test_multi_mode_prescrolls_bottom(tmp_path: Path) -> None:
         sleep=lambda _s: None,
     )
     assert perception.capture("测试会话") == CAPTURED
-    assert driver.scrolls and driver.scrolls[0][2] > 0  # 向下滚到底部
+    assert driver.scrolls and driver.scrolls[0][2] < 0  # 向下滚到底部
     assert driver.drags
 
 

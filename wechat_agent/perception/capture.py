@@ -131,6 +131,19 @@ class WeChatPerception:
         )
         return area, start, end, float(drag.duration)
 
+    def scroll_to_bottom(self) -> None:
+        """滚轮向下 + Ctrl+End 回到底部（陈旧窗口重试用）。"""
+        area, _start, _end, _duration = self.drag_plan()
+        clicks = int(self._config.capture.scroll_to_bottom_clicks)
+        if clicks > 0:
+            self._driver.scroll_at(area.center[0], area.center[1], -clicks)
+            self._sleep(0.5)
+        self._driver.click(area.x + 12, area.center[1])
+        for _ in range(5):
+            self._driver.hotkey("pagedown")
+        self._driver.hotkey("ctrl", "end")
+        self._sleep(0.5)
+
     def _assert_window_matches_profile(self) -> None:
         """静态容器依赖窗口位置：窗口移动/缩放后必须重新校准。"""
         try:
@@ -215,13 +228,16 @@ class WeChatPerception:
         def _reset_to_bottom() -> None:
             nonlocal scroll_count
             if scroll_clicks > 0:
-                self._driver.scroll_at(area.center[0], area.center[1], scroll_clicks)
+                self._driver.scroll_at(area.center[0], area.center[1], -scroll_clicks)
                 scroll_methods.append("wheel")
                 scroll_count += 1
                 self._sleep(0.4)
-            # 键盘兜底：点击消息区空白处，Ctrl+End 跳到最新
+            # 键盘兜底：点击消息区空白处，PageDown 多次 + Ctrl+End 跳到最新
             self._driver.click(area.x + 12, area.center[1])
+            for _ in range(5):
+                self._driver.hotkey("pagedown")
             self._driver.hotkey("ctrl", "end")
+            scroll_methods.append("pagedown")
             scroll_methods.append("ctrl+end")
             self._sleep(0.4)
 

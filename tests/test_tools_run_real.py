@@ -9,8 +9,9 @@ import pytest
 
 from vrpa.errors import ConfigError
 from wechat_agent.core.config import load_config
+from wechat_agent.perception.parser import WeChatParser
 from wechat_agent.tools.run import ScriptedBrain, ScriptedPerception
-from wechat_agent.tools.run_real import EchoBrain, execute_dry_run, run_real
+from wechat_agent.tools.run_real import EchoBrain, _GuardedPerception, execute_dry_run, run_real
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE = (ROOT / "config.yaml").read_text(encoding="utf-8")
@@ -100,3 +101,32 @@ def test_execute_dry_run_includes_timing(tmp_path: Path) -> None:
     timing = payload["timing"]
     for key in ("activate_ms", "switch_session_ms", "capture_ms", "ingest_ms", "reply_ms", "ticks_total_ms"):
         assert key in timing and timing[key] >= 0
+
+
+class _StaleInner:
+    def __init__(self, raws: list[str]) -> None:
+        self._raws = list(raws)
+        self.scrolls = 0
+
+    def capture(self, _chat: str) -> str:
+        return self._raws.pop(0)
+
+    def scroll_to_bottom(self) -> None:
+        self.scrolls += 1
+
+
+class _FakeHistory:
+    def get_chat(self, _chat: str) -> object:
+        return object()
+
+    def recent(self, _chat: str, _limit: int) -> list[object]:
+        return [SimpleNamespace(direction="in", ts="2026-11-07 07:11")]
+
+
+def test_stale_window_recaptures_before_ingest() -> None:
+    old = "三\n2026年11月07日  6:55\n旧消息"
+    new = "三\n2026年11月07日  7:20\n新消息"
+    inner = _StaleInner([old, new])
+    guard = _GuardedPerception(inner, _FakeHistory(), WeChatParser())
+    assert guard.capture("测试") == new
+    assert inner.scrolls == 1
