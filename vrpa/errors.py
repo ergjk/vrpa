@@ -200,7 +200,7 @@ class ProfileMismatch(AgentFrameworkError):
 class RedlineViolation(AgentFrameworkError):
     code = "REDLINE_VIOLATION"
     exit_code = int(ExitCode.REDLINE_VIOLATION)
-    default_hint = "该操作触碰红线（R1 超前开发 / R2 Git 隔离 / R3 消息流边界），已拒绝执行。"
+    default_hint = "该操作触碰红线（R1 超前开发 / R2 Git 流程违规 / R3 消息流边界），已拒绝执行。"
 
 
 class InternalError(AgentFrameworkError):

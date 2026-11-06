@@ -1,9 +1,9 @@
 ﻿<#
 .SYNOPSIS
-  DSH-WeChat-Agent 质量门禁（M0-F-01）。
+  VRPA-WeChat-Agent 质量门禁（M0-F-01）。
 .DESCRIPTION
   依次执行：ruff check -> ruff format --check -> mypy（vrpa 落地后）-> pytest(+coverage)。
-  任一步非 0 即整体失败。脚本不执行任何 Git 操作。
+  任一步非 0 即整体失败。门禁通过后由命令行执行 Git 提交（脚本本身不改动版本库）。
   注意：本文件以 UTF-8 BOM 保存，兼容 Windows PowerShell 5.1。
 .PARAMETER Fix
   自动修复 ruff 可修复项并格式化代码。

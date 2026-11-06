@@ -66,7 +66,7 @@ wechat_agent/                  # 微信应用 + 微信适配器
 | 旧模块路径 `wechat_agent.core.*` | 保留 shim 模块，re-export 框架符号；首次导出打 `DeprecationWarning`，下一里程碑删除 |
 | 环境变量 | `WECHAT_AGENT_*` 与新 `VRPA_*` 并存一个版本；同时设置时新名优先 |
 | 配置 | schema v1（`wechat:` 段）自动升级为 v2（`platform:` 段），升级时打印迁移提示 |
-| 类名 | `WeChatAgentError` 保留为 `AgentFrameworkError` 的别名 |
+| 类名 | 旧应用层类名别名已按指令彻底移除（统一 `AgentFrameworkError`） |
 | 接口 | `INTERFACE_VERSION` 语义化；破坏性变更必须升主版本并提供迁移说明 |
 
 ## 6. 质量门禁（M0-F-01 生效）

@@ -1,4 +1,4 @@
-# DSH-WeChat-Agent V1.0 —— M0 阶段最小依赖（跨版本安全）
+# VRPA-WeChat-Agent V1.0 —— M0 阶段最小依赖（跨版本安全）
 #
 # 用途：Python 3.14 等新版本环境下，完整 requirements.txt 中的 RPA 依赖可能缺少
 # 预编译 wheel。先装本文件即可推进 M0（配置/日志/双库/DI/控制台骨架）与

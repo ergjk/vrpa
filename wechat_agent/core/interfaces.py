@@ -161,7 +161,7 @@ class Perception(Protocol):
         ...
 
     def ensure_chat(self, chat: str) -> None:
-        """假 UIA 树定位搜索框 -> 粘贴会话名 -> 回车 -> 会话校验（失败抛 ChatSwitchFailed）。"""
+        """假 UIA 树定位搜索框 -> 粘贴会话名 -> 回车 -> 会话校验（失败抛 SessionSwitchFailed）。"""
         ...
 
     def capture(self, chat: str) -> str:

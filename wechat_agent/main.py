@@ -1,4 +1,4 @@
-"""DSH-WeChat-Agent V1.0 —— 进程入口与 CLI 骨架。
+"""VRPA-WeChat-Agent V1.0 —— 进程入口与 CLI 骨架。
 
 里程碑：M0-01（骨架）、M0-02（selftest 接线）、M0-04（统一异常 -> 退出码）
 职责：
@@ -88,7 +88,7 @@ def print_help(stream: TextIO | None = None) -> None:
     """
     target = sys.stdout if stream is None else stream
     lines = [
-        f"DSH-WeChat-Agent v{__version__} —— 微信 RPA 智能对话代理（Vision-RPA Edition）",
+        f"VRPA-WeChat-Agent v{__version__} —— 微信 RPA 智能对话代理（Vision-RPA Edition）",
         "",
         "用法：",
         "    python -m wechat_agent <command> [options]",
@@ -107,7 +107,7 @@ def print_help(stream: TextIO | None = None) -> None:
         "",
         "红线（不得违反）：",
         "    R1 只做 V1.0；V1.1/V1.2 仅 core/interfaces.py 允许空接口",
-        "    R2 未经主控官许可不执行任何 Git 操作，不生成 .gitignore",
+        "    R2 Git 操作由主控官监督、Agent 执行（破坏性操作需明确指令）",
         "    R3 假 UIA 树只服务操作界面；消息流只走「框选 + Ctrl+C 剪贴板」",
         "",
         "文档：README.md / docs/技术方案-V1.0.md / docs/行动清单-V1.0.md",
@@ -158,9 +158,8 @@ def dispatch(argv: Sequence[str]) -> ExitCode:
 
 def _debug_enabled() -> bool:
     debug = os.environ.get("VRPA_DEBUG", "").strip().lower() in {"1", "true", "yes", "on"}
-    ds_legacy = os.environ.get("DSH_RPA_DEBUG", "").strip().lower() in {"1", "true", "yes", "on"}
     legacy = os.environ.get("WECHAT_AGENT_DEBUG", "").strip().lower() in {"1", "true", "yes", "on"}
-    return debug or ds_legacy or legacy
+    return debug or legacy
 
 
 def _print_failure(exc: AgentFrameworkError) -> None:

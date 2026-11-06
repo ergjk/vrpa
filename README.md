@@ -1,4 +1,4 @@
-# DSH-WeChat-Agent (Vision-RPA Edition) V1.0
+# VRPA-WeChat-Agent (Vision-RPA Edition) V1.0
 
 ## 项目简介
 
@@ -11,8 +11,7 @@
 
 结合大语言模型（LLM）与本地双轨持久化记忆机制，系统提供安全、稳定、具备长期记忆与拟真交互能力、支持人类在环（Human-in-the-loop）控制的自动化解决方案。
 
-> 项目状态：**设计完成，等待主控官确认施工清单后按 M0~M6 逐项实现**。
-> 当前仓库仅包含文档，尚无代码文件。
+> 项目状态：**M0 框架底座已完成**（配置 / 日志 / 异常体系 / 接口契约 / 双库 / 框架分层 + `vrpa` 框架包，全量测试全绿）；M1~M6 功能实现按 [docs/行动清单-V1.0.md](docs/行动清单-V1.0.md) 推进。
 
 ---
 
@@ -153,12 +152,13 @@ V1.0 必需元素：`main_window`、`message_area`（仅提供框选拖拽坐标
 | 文档 | 内容 | 状态 |
 |---|---|---|
 | [README.md](README.md) | 项目总览、六层架构、感知层规范、红线 | 本文件 |
-| [docs/技术方案-V1.0.md](docs/技术方案-V1.0.md) | 详细技术设计：配置、双库 DDL、假 UIA 树算法、去重算法、队列/延迟、控制台、异常、测试策略、风险 | 设计稿 |
-| [docs/行动清单-V1.0.md](docs/行动清单-V1.0.md) | 施工图：M0~M6 全量任务（任务描述 / 输入输出 / DoD）、阶段门禁、前置阻塞项 | M0-01~06 已完成 |
+| [docs/技术方案-V1.0.md](docs/技术方案-V1.0.md) | 详细技术设计：配置、双库 DDL、假 UIA 树算法、去重算法、队列/延迟、控制台、异常、测试策略、风险 | M0 框架底座已完成 |
+| [docs/行动清单-V1.0.md](docs/行动清单-V1.0.md) | 施工图：M0~M6 全量任务（任务描述 / 输入输出 / DoD）、阶段门禁、前置阻塞项 | M0 框架底座已完成 |
 | [docs/architecture.md](docs/architecture.md) | 目标架构：双包分层（vrpa + wechat_agent）、依赖规则、M0-F 迁移路线 | Accepted |
 | [docs/ADR/](docs/ADR/) | ADR-0001 框架分层 / ADR-0002 配置 schema v2 / ADR-0003 接口稳定与适配器契约 | Accepted |
 | [docs/writing-an-adapter.md](docs/writing-an-adapter.md) | 第三方平台适配器编写指南（QQ / 钉钉复用入口） | 草案 |
 | [CHANGELOG.md](CHANGELOG.md) | 版本变更记录（Keep a Changelog） | 维护中 |
+| [LICENSE](LICENSE) | MIT License（版权人：ergjk） | 生效 |
 
 ---
 
@@ -169,10 +169,11 @@ V1.0 必需元素：`main_window`、`message_area`（仅提供框选拖拽坐标
 - **V1.1**（动画表情、语音/TTS、消息撤回与情绪模拟）与 **V1.2**（行为克隆）以及**生图等多模态扩展**，V1.0 阶段**不得出现任何具体实现代码**。
 - 最多只允许在 `core/interfaces.py` 中保留**空的接口定义**（Protocol / 空方法），不实现、不接线、不加测试。
 
-### 红线 2：Git 与版本控制隔离
-- 所有版本控制、分支管理、远程操作**由主控官本人执行**。
-- 未经主控官明确许可，**不执行任何 Git 命令**；需要提交时由我方提出申请，经批准后再操作。
-- 本仓库产出**不包含 `.gitignore`**、不初始化 Git 仓库。
+### 红线 2：Git 由主控官监督、Agent 执行
+- 版本控制、分支管理与推送由 **Agent 执行，主控官监督与验收**。
+- 每次里程碑 DoD 通过后由 Agent 提交并推送；提交信息保持原子、可回溯。
+- 破坏性操作（force push / 历史重写 / 删除远端分支）必须获得主控官明确指令。
+- 仓库已初始化 `.gitignore` 与 `origin`，生成产物严禁入库。
 
 ### 红线 3：感知层消息流边界
 - 假 UIA 树只用于操作界面；**消息流只准走「鼠标物理框选 + `Ctrl+C` 剪贴板」**。
@@ -230,4 +231,4 @@ python -m wechat_agent run --dry-run
 python -m wechat_agent run
 ```
 
-> 当前以上命令均未实现，具体交付顺序与验收方式见 [docs/行动清单-V1.0.md](docs/行动清单-V1.0.md)。
+> M0 框架底座已完成（配置 / 日志 / 异常 / 接口 / 双库 / 框架分层）；M1~M6 命令按 [docs/行动清单-V1.0.md](docs/行动清单-V1.0.md) 逐步交付。

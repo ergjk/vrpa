@@ -91,7 +91,7 @@ class LoggingNamespace:
     data_dir_envs: tuple[str, ...]
 
 
-_runtime = LoggingNamespace(name="vrpa", data_dir_envs=("VRPA_DATA_DIR", "DSH_RPA_DATA_DIR"))
+_runtime = LoggingNamespace(name="vrpa", data_dir_envs=("VRPA_DATA_DIR",))
 
 
 def configure_logging_namespace(

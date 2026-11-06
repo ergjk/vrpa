@@ -1,4 +1,4 @@
-"""DSH-WeChat-Agent（Vision-RPA Edition）V1.0。
+"""VRPA-WeChat-Agent（Vision-RPA Edition）V1.0。
 
 包结构：docs/技术方案-V1.0.md §3.1
 施工顺序：docs/行动清单-V1.0.md（M0 -> M6）
@@ -11,4 +11,4 @@ __all__ = ["__version__"]
 from vrpa.logging import configure_logging_namespace as _configure_logging_ns
 
 # 应用层注入 logger 命名空间与环境变量优先级（框架默认中性值 vrpa）
-_configure_logging_ns("wechat_agent", data_dir_env=("VRPA_DATA_DIR", "DSH_RPA_DATA_DIR", "WECHAT_AGENT_DATA_DIR"))
+_configure_logging_ns("wechat_agent", data_dir_env=("VRPA_DATA_DIR", "WECHAT_AGENT_DATA_DIR"))

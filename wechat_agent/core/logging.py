@@ -44,7 +44,7 @@ from vrpa.logging import (
 # 旧行为：logger 名 wechat_agent；环境变量新名优先、旧名回退
 configure_logging_namespace(
     "wechat_agent",
-    data_dir_env=("VRPA_DATA_DIR", "DSH_RPA_DATA_DIR", "WECHAT_AGENT_DATA_DIR"),
+    data_dir_env=("VRPA_DATA_DIR", "WECHAT_AGENT_DATA_DIR"),
 )
 
 warnings.warn(

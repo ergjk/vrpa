@@ -19,7 +19,7 @@ from wechat_agent.core.config import ConfigError as ConfigErrorFromConfig
 from wechat_agent.core.errors import (
     ERROR_CLASSES,
     EXIT_CODE_MAP,
-    ChatSwitchFailed,
+    AgentFrameworkError,
     ConfigError,
     CopyFailed,
     DBError,
@@ -30,24 +30,24 @@ from wechat_agent.core.errors import (
     LLMError,
     ProfileMismatch,
     RedlineViolation,
+    SessionSwitchFailed,
     TreeConfigError,
     UsageError,
     VerifyFailed,
-    WeChatAgentError,
     WindowNotForeground,
     WindowNotFound,
     exit_code_for,
     format_exception_chain,
 )
 
-EXPECTED_EXIT_CODES: dict[type[WeChatAgentError], int] = {
+EXPECTED_EXIT_CODES: dict[type[AgentFrameworkError], int] = {
     UsageError: 2,
     ConfigError: 2,
     ElementNotVisible: 3,
     TreeConfigError: 3,
     WindowNotFound: 3,
     WindowNotForeground: 3,
-    ChatSwitchFailed: 3,
+    SessionSwitchFailed: 3,
     CopyFailed: 3,
     VerifyFailed: 4,
     LLMError: 5,
@@ -61,9 +61,9 @@ EXPECTED_EXIT_CODES: dict[type[WeChatAgentError], int] = {
 
 def test_all_required_classes_are_subclasses() -> None:
     for cls in EXPECTED_EXIT_CODES:
-        assert issubclass(cls, WeChatAgentError)
+        assert issubclass(cls, AgentFrameworkError)
     assert set(ERROR_CLASSES) == set(EXPECTED_EXIT_CODES)
-    assert WeChatAgentError not in ERROR_CLASSES
+    assert AgentFrameworkError not in ERROR_CLASSES
 
 
 def test_exit_code_mapping_matches_contract() -> None:

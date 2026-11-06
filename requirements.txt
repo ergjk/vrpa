@@ -1,4 +1,4 @@
-# DSH-WeChat-Agent V1.0 —— 完整生产依赖
+# VRPA-WeChat-Agent V1.0 —— 完整生产依赖
 # 目标 Python：3.11 / 3.12 / 3.13（首选 3.12）
 # Python 3.14：部分 RPA/视觉依赖可能尚无 cp314 预编译 wheel，见 requirements-core.txt 的降级说明
 #

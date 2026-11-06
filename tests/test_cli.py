@@ -19,7 +19,7 @@ from wechat_agent import main as main_module
 def test_no_args_prints_help(capsys: pytest.CaptureFixture[str]) -> None:
     assert main_module.main([]) == 0
     out = capsys.readouterr().out
-    assert "DSH-WeChat-Agent" in out
+    assert "VRPA-WeChat-Agent" in out
     assert "退出码" in out
 
 

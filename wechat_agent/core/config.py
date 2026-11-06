@@ -29,7 +29,7 @@ from vrpa.errors import ConfigError
 DEFAULT_CONFIG_NAME = "config.yaml"
 SUPPORTED_SCHEMA = 1
 ENV_CONFIG_OVERRIDE = "VRPA_CONFIG"
-ENV_CONFIG_OVERRIDE_LEGACY = ("DSH_RPA_CONFIG", "WECHAT_AGENT_CONFIG")
+ENV_CONFIG_OVERRIDE_LEGACY = ("WECHAT_AGENT_CONFIG",)
 ENV_API_KEY = "DEEPSEEK_API_KEY"
 
 _TOP_KEYS = (
@@ -955,7 +955,7 @@ def render_selftest(report: Mapping[str, Any]) -> str:
     llm = report["llm"]
     runtime = report["runtime"]
     lines = [
-        "== DSH-WeChat-Agent selftest (M0-02) ==",
+        "== VRPA-WeChat-Agent selftest (M0-02) ==",
         f"CONFIG OK  path={config['path']}  schema={config['schema']}",
         f"display    : {display['width']}x{display['height']} @{display['dpi_scale']}"
         f"  profile={display['profile']}  detected={display['detected']}",

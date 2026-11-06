@@ -9,7 +9,7 @@
 
 项目原定位是「V1.0 微信智能体」，M0 基建（配置/日志/异常/接口）按应用内模块实现，位于 `wechat_agent.core`。
 主控官决策：M0 基建同时作为**可复用多平台 RPA 框架底座**，使未来开发者能无缝替换感知层、复用于 QQ/钉钉等场景。
-现有底座存在平台耦合：配置顶层 `wechat:` 段、`WeChatAgentError` 基类、logger 名 `wechat_agent`、
+现有底座存在平台耦合：配置顶层 `wechat:` 段、异常基类与应用名强绑定、logger 名 `wechat_agent`、
 `capture(chat)`/`ensure_chat()` 会话语义、缺失适配器契约与合规测试套件；同时缺少 pyproject/ruff/mypy/覆盖率门禁。
 
 ## 决策
@@ -21,7 +21,7 @@
 5. 迁移采用**兼容 shim + 弃用告警**，旧路径/旧类名/旧环境变量保留一个版本；
 6. 质量门禁（ruff / ruff format / mypy strict / pytest / coverage ≥ 85%）在 M0-F-01 即生效。
 
-6. （2026-11-06 主控官决定）框架包名由 `dsh_rpa` 正式更名为 **`vrpa`（Vision RPA）**；旧包名保留兼容 shim（DeprecationWarning），计划 M0-F-06 移除；环境变量统一 `VRPA_*`，旧 `DSH_RPA_*` / `WECHAT_AGENT_*` 作为回退。
+6. （2026-11-06 主控官决定）框架包最终定名 **`vrpa`（Vision RPA）**；旧包名兼容 shim 已按指令彻底移除；环境变量统一 `VRPA_*`，应用层保留 `WECHAT_AGENT_*` 回退。
 
 ## 备选方案与被否原因
 

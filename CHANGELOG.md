@@ -6,7 +6,7 @@
 ## [Unreleased]
 
 ### Changed
-- 框架包名由 `dsh_rpa` 正式更名为 **`vrpa`（Vision RPA）**；旧包名保留兼容 shim（DeprecationWarning）；环境变量统一 `VRPA_*`，兼容 `DSH_RPA_*` / `WECHAT_AGENT_*` 回退
+- 框架包名最终定名 **`vrpa`（Vision RPA）**；旧包名兼容 shim 已彻底移除；环境变量统一 `VRPA_*`（应用层保留 `WECHAT_AGENT_*` 回退）
 
 ### Added
 - M0-F-02 `vrpa` 框架包落地：
@@ -18,7 +18,7 @@
 
 ### Changed
 - `wechat_agent/main.py`、`core/config.py`、`memory/db.py` 改为直接使用 `vrpa.*`（应用内部不再依赖 shim）
-- 预留旧名别名：`WeChatAgentError = AgentFrameworkError`、`ChatSwitchFailed = SessionSwitchFailed`
+- 旧应用层类名别名已按指令彻底移除（统一使用 `AgentFrameworkError` / `SessionSwitchFailed`）
 - 启用 mypy strict（`vrpa` 3 个文件 0 error）；覆盖率门禁提升到 87%+
 - 修复 `pyproject.toml` 无效配置 `cache_dir`（pytest 9 告警）
 

@@ -1,5 +1,5 @@
 # ============================================================================
-# DSH-WeChat-Agent —— 项目与质量门禁配置（M0-F-01）
+# VRPA-WeChat-Agent —— 项目与质量门禁配置（M0-F-01）
 # 纪律：本文件不承载业务逻辑；工具链配置的唯一真源。
 # 版本控制：Git 相关操作由主控官执行，本仓库不包含 .gitignore / .git。
 # ============================================================================
@@ -9,11 +9,12 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "dsh-wechat-agent"
+name = "vrpa-wechat-agent"
 version = "0.1.0"
 description = "零 Hook 的微信智能对话代理（Vision-RPA Edition），底部为可复用的多平台 RPA 框架"
 readme = "README.md"
 requires-python = ">=3.10"
+license = { text = "MIT" }
 dependencies = [
   "PyYAML>=6.0.1",
 ]
@@ -41,7 +42,7 @@ dev = [
 wechat-agent = "wechat_agent.main:main"
 
 [tool.setuptools.packages.find]
-include = ["wechat_agent*", "vrpa*", "dsh_rpa*"]
+include = ["wechat_agent*", "vrpa*"]
 exclude = ["tests*", "data*", "docs*", "scripts*"]
 
 # ---------------------------------------------------------------- ruff
@@ -73,7 +74,7 @@ filterwarnings = [
 
 # ---------------------------------------------------------------- coverage
 [tool.coverage.run]
-source = ["wechat_agent", "vrpa", "dsh_rpa"]
+source = ["wechat_agent", "vrpa"]
 branch = true
 omit = [
   "*/__main__.py",

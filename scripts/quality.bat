@@ -1,6 +1,6 @@
 @echo off
 REM ===========================================================================
-REM DSH-WeChat-Agent quality gate wrapper (M0-F-01)
+REM VRPA-WeChat-Agent quality gate wrapper (M0-F-01)
 REM Why: Windows PowerShell may block unsigned .ps1 scripts. This wrapper runs
 REM      powershell with -ExecutionPolicy Bypass, so no manual policy change is
 REM      needed and no signing is required.
