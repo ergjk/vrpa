@@ -20,7 +20,7 @@ from typing import Any, Protocol, runtime_checkable
 
 from vrpa.errors import ConfigError
 
-__all__ = ["PlatformMeta", "PlatformPlugin", "PlatformRegistry"]
+__all__ = ["PlatformMeta", "PlatformPlugin", "PlatformRegistry", "is_platform_plugin"]
 
 
 @dataclass(frozen=True)
@@ -54,6 +54,17 @@ class PlatformPlugin(Protocol):
     def describe(self) -> str:
         """一行人类可读描述（进入 selftest 报告）。"""
         ...
+
+
+_PLUGIN_ATTRS = ("kind", "legacy_sections")
+_PLUGIN_METHODS = ("meta", "default_options", "validate_options", "describe")
+
+
+def is_platform_plugin(obj: object) -> bool:
+    """结构化判定：协议含数据成员，不能用 isinstance 检查 runtime_checkable 协议。"""
+    if any(not hasattr(obj, name) for name in _PLUGIN_ATTRS):
+        return False
+    return all(callable(getattr(obj, name, None)) for name in _PLUGIN_METHODS)
 
 
 class PlatformRegistry:

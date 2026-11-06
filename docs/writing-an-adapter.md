@@ -1,6 +1,6 @@
 # 编写平台适配器（QQ / 钉钉 / 其他 RPA 场景）
 
-> 状态：草案（M0-F-01）；F-04 起随 `vrpa.testing.contracts` 发布而定稿。
+> 状态：可用（M0-F-04：`vrpa.testing.contracts` 已交付并覆盖 10 项检查；新平台按本文接入）。
 > 目标：任何人按本指南实现适配器 + 通过合规测试，即可把 `vrpa` 底座复用到新平台。
 
 ## 0. 适配器 = 平台差异的唯一载体
@@ -74,7 +74,7 @@ adapter = registry.create("qq", config.platform)
 
 ```powershell
 python -m pytest tests -q
-python -m vrpa.testing.contracts --adapter myqq.adapter:QQAdapter   # F-04 起提供
+python -m vrpa.testing.contracts --adapter myqq.adapter:QQAdapter   # 已提供（M0-F-04）
 ```
 
 ## 7. 平台文档模板

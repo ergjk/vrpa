@@ -1,7 +1,7 @@
 # VRPA-WeChat-Agent
 
 > **VRPA（Vision RPA）通用 RPA 框架底座 + 微信参考实现** · MIT License
-> 状态：**M0 框架底座已完成**（155 项测试全绿 · 覆盖率 88.45% · ruff / mypy strict 全绿）
+> 状态：**M0 框架底座已完成**（191 项测试全绿 · 覆盖率 90.55% · ruff / mypy strict 全绿）
 
 ---
 
@@ -60,7 +60,7 @@
 | 配置内核 | 通用配置加载、校验、环境变量覆盖（`VRPA_*`），平台字段由适配器插件校验 | 已完成 M0-F-03 |
 | 拟人化调度队列 | 优先级 FIFO、跨会话轮转、限流 / 静默时段、可打断的拟人延迟（思考 / 打字 / 发送节奏） | 规划中 M4 |
 | 视觉锚点匹配 | 元素树 profile + 多尺度模板匹配定位（失败即中止，禁止坐标兜底），供各平台适配器复用 | 规划中 M1（微信参考实现先行，随后按端口契约抽入 `vrpa`） |
-| 平台适配器契约 | `PlatformAdapter` 协议 + 注册表 + **适配器合规测试套件**（第三方实现必须全绿才能接入） | 规划中 M0-F-04 |
+| 平台适配器契约 | `PlatformAdapter` 协议 + `AdapterRegistry` + **适配器合规测试套件**（`vrpa.testing.contracts`，第三方实现必须全绿才能接入） | 已实现 M0-F-04 |
 
 ### 3.2 应用层特性（由 `wechat_agent` 提供，可作为适配器示例）
 
@@ -83,7 +83,11 @@ vrpa/                     # 通用框架底座（可独立发布/复用）
   __init__.py             #   框架版本 + 契约版本 INTERFACE_VERSION
   logging.py              #   日志 / 审计 / trace_id / 脱敏（命名空间可配置）
   errors.py               #   平台无关异常族 + 退出码契约
-tests/                    # 155 项测试（配置/日志/异常/接口/双库/CLI/兼容 shim）
+  config/                 #   配置内核：env / validators / plugin / loader（v1 -> v2 升级）
+  ports.py                #   五端口协议 + 跨层 DTO（M0-F-04）
+  platform.py             #   PlatformAdapter 协议 + AdapterRegistry（M0-F-04）
+  testing/                #   Fakes + contracts 合规测试套件（M0-F-04）
+tests/                    # 191 项测试（配置/日志/异常/接口/双库/CLI/端口/契约/兼容 shim）
 docs/                     # 技术方案、行动清单、架构、ADR、适配器指南
 scripts/quality.ps1|.bat  # 一键质量门禁（ruff + mypy strict + pytest + coverage）
 wechat_agent/             # 微信参考实现（六层模块见 §5.1）
@@ -175,7 +179,7 @@ python -m wechat_agent run                     # M6（正式运行，建议先�
 3. 提供平台配置校验器（`PlatformAdapter.config_schema()`）与元素树 profile 规范；
 4. 提供消息解析策略包（输入=采集通道原始文本，输出=`IncomingMessage` 列表，附 ≥15 份真实样例）；
 5. 实现 `PlatformAdapter` 并注册到 `AdapterRegistry`；
-6. 跑 `vrpa.testing.contracts` 合规测试套件（M0-F-04 交付）与 `scripts\quality.bat`，全绿即接入成功。
+6. 跑合规测试套件 `python -m vrpa.testing.contracts --adapter <模块>:<类> --json`（M0-F-04 已交付）与 `scripts\quality.bat`，全绿即接入成功。
 
 ---
 
@@ -193,7 +197,7 @@ python -m wechat_agent run                     # M6（正式运行，建议先�
 
 ```powershell
 .\scripts\quality.bat          # 一键：ruff check → ruff format → mypy strict → pytest+coverage
-python -m pytest tests -q     # 单元测试（当前 155 passed）
+python -m pytest tests -q     # 单元测试（当前 191 passed）
 python -m mypy                # vrpa 框架包 strict
 ```
 
@@ -202,8 +206,8 @@ python -m mypy                # vrpa 框架包 strict
 | 静态检查 | ruff（E/F/I/UP/B/SIM） | 全绿 |
 | 格式 | ruff format | 全绿 |
 | 类型 | mypy strict（`vrpa`） | 0 error |
-| 测试 | pytest | 155 passed |
-| 覆盖率 | pytest-cov | 88.45%（门禁 ≥85%） |
+| 测试 | pytest | 191 passed |
+| 覆盖率 | pytest-cov | 90.55%（门禁 ≥85%） |
 | 一键 | `scripts\quality.bat` | `QUALITY GATE: PASS` |
 
 ---
@@ -214,7 +218,7 @@ python -m mypy                # vrpa 框架包 strict
 |---|---|---|
 | [README.md](README.md) | 分层定位、能力矩阵、受众导航、微信实现说明、红线 | 本文件 |
 | [docs/architecture.md](docs/architecture.md) | 目标架构：双包分层（`vrpa` + `wechat_agent`）、依赖规则、M0-F 迁移路线 | Accepted |
-| [docs/writing-an-adapter.md](docs/writing-an-adapter.md) | **VRPA 适配器指南**：QQ / 钉钉等平台接入步骤 | 草案（随 M0-F-04 定稿） |
+| [docs/writing-an-adapter.md](docs/writing-an-adapter.md) | **VRPA 适配器指南**：QQ / 钉钉等平台接入步骤 | 可用（M0-F-04 定稿） |
 | [docs/ADR/](docs/ADR/) | ADR-0001 框架分层 / 0002 配置 schema v2 / 0003 接口稳定与适配器契约 | Accepted |
 | [docs/技术方案-V1.0.md](docs/技术方案-V1.0.md) | 详细技术设计：假 UIA 树算法、双库、去重、队列/延迟、控制台、异常、测试策略 | M0 框架底座已完成 |
 | [docs/行动清单-V1.0.md](docs/行动清单-V1.0.md) | 施工图：M0~M6 全量任务（任务描述 / 输入输出 / DoD）、阶段门禁 | M0 框架底座已完成 |

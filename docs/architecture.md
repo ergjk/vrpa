@@ -87,7 +87,7 @@ wechat_agent/                  # 微信应用 + 微信适配器
 | **M0-F-01（本轮）** | ADR 0001-0003、本文档、适配器指南、`pyproject.toml`、`scripts/quality.ps1`、`CHANGELOG.md` | 82 测试全绿；ruff/format 通过；覆盖率 ≥ 85% |
 | M0-F-02 | `vrpa` 包：logging / errors / config 内核迁移 + `wechat_agent.core.*` shim | 旧 import 全部可用且打 warning；新包测试通过；mypy strict 生效 |
 | M0-F-03（已完成） | 配置 schema v2：`platform:` 命名空间 + 插件式校验 + `VRPA_*` | 旧 `wechat:` 配置自动升级；`selftest` 输出平台信息 |
-| M0-F-04 | `ports.py` / `platform.py` / `AdapterRegistry` / `testing.contracts` / `testing.fakes` | contracts kit 可运行；Fake 适配器全绿 |
+| M0-F-04（已完成） | `ports.py` / `platform.py` / `AdapterRegistry` / `testing.contracts` / `testing.fakes` | contracts kit 可运行；Fake 适配器全绿；反例可检出 |
 | M0-F-05 | 微信适配器注册 + 应用层去框架化（memory/brain/act/control 接 ports） | M1/M2 实现类可注入 Mock；import 边界测试通过 |
 | M0-F-06 | 弃用清理、指南定稿、README/CHANGELOG 更新 | 无 DeprecationWarning；文档评审通过 |
 

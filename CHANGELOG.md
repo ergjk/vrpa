@@ -29,6 +29,13 @@
   - `config.yaml` 升级 schema 2（`platform.kind: wechat` + `platform.options`）
   - 环境变量统一 `VRPA_*`；旧名回退并打 DeprecationWarning；`selftest` 输出平台信息与迁移记录
 
+- M0-F-04 平台适配器契约与合规测试套件：
+  - `vrpa/ports.py`：五端口协议（ElementTree / Perception / Executor / Brain / MemoryStore）+ 跨层 DTO
+  - `vrpa/platform.py`：`PlatformAdapter` 协议、`AdapterRegistry`、`AdapterInfo`（结构判定，避免 runtime_checkable 数据成员限制）
+  - `vrpa/testing/fakes.py`：平台无关 Fakes（可注入定位 / 会话切换 / 发送 / LLM 失败场景）
+  - `vrpa/testing/contracts.py`：适配器合规测试套件（10 项检查）+ CLI `python -m vrpa.testing.contracts --adapter 模块:属性 [--json]`
+  - 判定标准：Fake 适配器全绿、反例可检出；第三方适配器必须全绿才能接入
+
 ### Planned
 - M0-F-03：配置 schema v2（`platform:` 命名空间 + 平台插件式校验）
 - M0-F-04：`PlatformAdapter` 协议 + 适配器注册表 + 合规测试套件 `vrpa.testing.contracts`
