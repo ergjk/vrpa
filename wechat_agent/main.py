@@ -94,10 +94,10 @@ def print_help(stream: TextIO | None = None) -> None:
         "    python -m wechat_agent <command> [options]",
         "    python -m wechat_agent --help | --version",
         "",
-        "子命令（✓=已交付，·=规划中）：",
+        "子命令（[已交付] 表示已实现，[规划中] 表示按里程碑交付）：",
     ]
     for cmd in COMMANDS.values():
-        mark = "✓" if cmd.handler is not None else "·"
+        mark = "[已交付]" if cmd.handler is not None else "[规划中]"
         lines.append(f"  {mark} {cmd.name:<13} {cmd.summary}（{cmd.milestone}）")
     lines += [
         "",

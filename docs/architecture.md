@@ -35,7 +35,7 @@ vrpa/                       # 框架底座（可独立发布为 vrpa）
 ├── cli.py                     #   通用 CLI 骨架（注册表/退出码/异常兜底/帮助）
 └── testing/
     ├── fakes.py               #   Fake 全套（M4 全链路依赖）
-    └── contracts.py           #   ★ 适配器合规测试套件（第三方实现必须全绿）
+    └── contracts.py           #   重点：适配器合规测试套件（第三方实现必须全绿）
 
 wechat_agent/                  # 微信应用 + 微信适配器
 ├── adapters/wechat/           #   window/uia_tree/anchor_match/capture/parser/session_switch
