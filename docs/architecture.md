@@ -36,6 +36,7 @@ vrpa/                       # 框架底座（可独立发布为 vrpa）
 ├── memory/                    #   双库引擎：DDL/迁移/备份/自检 + SQLite MemoryStore（M0-F-05）
 ├── vision/                    #   profile / 匹配 / 定位 / 校准 / 窗口 / 驱动 / 校准包（M1-M2）
 ├── parsing/                   #   解析策略分发器（M2）
+├── memory/                    #   history / dedup / long_term / jobs（M3）
 ├── cli.py                     #   通用 CLI 骨架（注册表/退出码/异常兜底/帮助）
 └── testing/
     ├── fakes.py               #   Fake 全套（M4 全链路依赖）
@@ -116,6 +117,13 @@ wechat_agent/                  # 微信应用 + 微信适配器
 | M2-04（已完成） | 解析器与样例库 | `vrpa.parsing.StrategyDispatcher` + 微信三策略 + 15 份 golden 样例 |
 | M2-05（已完成） | probe 采集诊断 | `probe --text/--chat --json`，只读不落库不回复 |
 | M2-06（已完成） | R3 边界红线静态测试 | 消息路径禁用 cv2/OCR/模板匹配；解析器只接受文本 |
+| M3-01（已完成） | 流水库读写 API | `vrpa.memory.history`：HistoryStore（会话/写入/尾部哈希/状态更新） |
+| M3-02（已完成） | 去重核心（尾部锚点对齐） | `vrpa.memory.dedup.align_tail`：最长尾部重叠、未锚定不猜测 |
+| M3-03（已完成） | 多端识别与合并策略 | 无发送者前缀 = 主人其它设备发送：入库 direction=self、不排队回复 |
+| M3-04（已完成） | 入库流程与状态回写闭环 | `wechat_agent.memory.pipeline`：对齐->写入->排队；writeback 幂等 |
+| M3-05（已完成） | 档案库 long_term.py | `vrpa.memory.long_term`：规则提取 + 幂等 upsert + 召回/忘记 |
+| M3-06（已完成） | 长期记忆提炼异步 job | `vrpa.memory.jobs`：tasks 持久队列、claim/complete/fail 重试 |
+| M3-07（已完成） | 去重离线回放与 golden | `replay` CLI + 7 份场景 golden（临时库回放，不污染 data/） |
 
 ## 8. 与 V1.0 功能里程碑的关系
 

@@ -1,0 +1,27 @@
+{
+  "chat": "张三",
+  "policy": "ignore",
+  "known": [
+    {
+      "content": "旧消息",
+      "direction": "in",
+      "sender": "张三"
+    }
+  ],
+  "captured": [
+    {
+      "content": "完全新消息",
+      "sender": "张三"
+    }
+  ],
+  "expected": {
+    "reason": "low_confidence_ignored",
+    "duplicates": 0,
+    "inserted": [],
+    "queued": [],
+    "alignment": {
+      "reason": "no_overlap",
+      "anchored": false
+    }
+  }
+}

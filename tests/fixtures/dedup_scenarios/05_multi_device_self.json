@@ -1,0 +1,27 @@
+{
+  "chat": "张三",
+  "known": [],
+  "captured": [
+    {
+      "content": "我手机发的",
+      "sender": null
+    },
+    {
+      "content": "你好",
+      "sender": "张三"
+    }
+  ],
+  "expected": {
+    "reason": "ok",
+    "queued": [
+      "你好"
+    ],
+    "self_messages": [
+      "我手机发的"
+    ],
+    "alignment": {
+      "reason": "no_known",
+      "anchored": false
+    }
+  }
+}

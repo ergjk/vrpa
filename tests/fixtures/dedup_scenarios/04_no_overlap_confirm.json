@@ -1,0 +1,28 @@
+{
+  "chat": "张三",
+  "policy": "queue_confirm",
+  "known": [
+    {
+      "content": "旧消息",
+      "direction": "in",
+      "sender": "张三"
+    }
+  ],
+  "captured": [
+    {
+      "content": "待确认消息",
+      "sender": "张三"
+    }
+  ],
+  "expected": {
+    "reason": "low_confidence_confirm",
+    "inserted": [
+      "待确认消息"
+    ],
+    "queued": [],
+    "alignment": {
+      "reason": "no_overlap",
+      "anchored": false
+    }
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "chat": "张三",
+  "known": [
+    {
+      "content": "你好",
+      "direction": "in",
+      "sender": "张三"
+    },
+    {
+      "content": "在吗",
+      "direction": "in",
+      "sender": "张三"
+    }
+  ],
+  "captured": [
+    {
+      "content": "你好",
+      "sender": "张三"
+    },
+    {
+      "content": "在吗",
+      "sender": "张三"
+    },
+    {
+      "content": "晚上好",
+      "sender": "张三"
+    }
+  ],
+  "expected": {
+    "reason": "ok",
+    "duplicates": 2,
+    "queued": [
+      "晚上好"
+    ],
+    "self_messages": [],
+    "alignment": {
+      "reason": "tail_anchor",
+      "overlap": 2,
+      "added_count": 1,
+      "anchored": true
+    }
+  }
+}

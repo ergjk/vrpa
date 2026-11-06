@@ -1,0 +1,40 @@
+{
+  "chat": "张三",
+  "known": [
+    {
+      "content": "a",
+      "direction": "in",
+      "sender": "张三"
+    },
+    {
+      "content": "b",
+      "direction": "in",
+      "sender": "张三"
+    },
+    {
+      "content": "c",
+      "direction": "in",
+      "sender": "张三"
+    }
+  ],
+  "captured": [
+    {
+      "content": "b",
+      "sender": "张三"
+    },
+    {
+      "content": "c",
+      "sender": "张三"
+    }
+  ],
+  "expected": {
+    "reason": "ok",
+    "duplicates": 2,
+    "inserted": [],
+    "alignment": {
+      "reason": "full_duplicate",
+      "overlap": 2,
+      "added_count": 0
+    }
+  }
+}

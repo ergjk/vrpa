@@ -90,8 +90,18 @@
   - 契约套件：端口冒烟容忍 WindowNotFound/WindowNotForeground（无桌面环境仍可全绿）
   - 测试：323 passed / 86.85%
 
+### Added
+- M3 去重对齐与记忆提炼（M3-01 ~ M3-07）：
+  - `vrpa/memory/history.py`：流水库读写 API（HistoryStore：会话/写入/尾部哈希/状态更新/计数）
+  - `vrpa/memory/dedup.py`：尾部锚点对齐（full_duplicate / tail_anchor / no_overlap，未锚定不猜测）
+  - `wechat_agent/memory/pipeline.py`：入库闭环（去重 -> 多端识别 -> 写入 -> 排队；writeback 幂等）
+  - `vrpa/memory/long_term.py`：规则提取 + 幂等档案写入 + 召回/忘记
+  - `vrpa/memory/jobs.py`：tasks 持久队列 + MemoryExtractJob（重试/最大次数/取消）
+  - `wechat_agent/tools/replay.py` + 7 份去重回放场景 golden（临时库回放，不污染 data/）
+  - 测试：memory history / dedup / long_term / jobs / pipeline / replay；372 passed / 87.46%
+
 ### Planned
-- M1 / M2 已完成；下一步 M3（去重对齐与记忆提炼）待主控官立项
+- M3 已完成；下一步 M4（轮询编排、队列/拟人延迟、dry-run）待主控官立项
 - M0-07：环境体检 `doctor`
 - M0-08：控制台骨架
 - M0-09：红线自检 `selftest --redlines`

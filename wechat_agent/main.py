@@ -52,7 +52,7 @@ _COMMAND_SPECS = (
     ("calibrate", "假 UIA 树校准向导（框选元素 + 锚点图 + 回验）", "M1-04", int(ExitCode.USAGE)),
     ("locate", "定位单个界面元素，打印坐标与匹配分数", "M1-03", int(ExitCode.ELEMENT_NOT_VISIBLE)),
     ("probe", "打印原始剪贴板文本（不入库、不回复）", "M2-05", int(ExitCode.USAGE)),
-    ("replay", "离线回放 parser / dedup / flow 场景", "M2-04", int(ExitCode.USAGE)),
+    ("replay", "离线回放 parser / dedup / flow 场景", "M3-07", int(ExitCode.USAGE)),
     ("db-check", "双库结构与迁移检查", "M0-06", int(ExitCode.USAGE)),
     ("llm-ping", "LLM 连通性检查 / 单轮问答", "M5-05", int(ExitCode.USAGE)),
     ("run", "主进程（真实 / --dry-run / --fake / --simulate）", "M4-06", int(ExitCode.USAGE)),
@@ -143,6 +143,13 @@ def _cmd_locate(argv: Sequence[str]) -> int:
     return run_locate(argv)
 
 
+def _cmd_replay(argv: Sequence[str]) -> int:
+    """M3-07：去重离线回放（golden 校验）。"""
+    from wechat_agent.tools.replay import run_replay
+
+    return run_replay(argv)
+
+
 def _cmd_probe(argv: Sequence[str]) -> int:
     """M2-05：采集诊断（只读，不落库、不回复）。"""
     from wechat_agent.tools.probe import run_probe
@@ -227,6 +234,7 @@ register_handler("validate-tree", _cmd_validate_tree)
 register_handler("calibrate", _cmd_calibrate)
 register_handler("locate", _cmd_locate)
 register_handler("probe", _cmd_probe)
+register_handler("replay", _cmd_replay)
 
 
 if __name__ == "__main__":
