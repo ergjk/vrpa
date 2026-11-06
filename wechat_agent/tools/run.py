@@ -191,7 +191,7 @@ def _parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--drag-from", default=None, help="--real 临时覆盖拖拽起点比例 x,y（如 0.10,0.85）")
     parser.add_argument("--drag-to", default=None, help="--real 临时覆盖拖拽终点比例 x,y（如 0.90,0.15）")
     parser.add_argument("--drag-duration", type=float, default=None, help="--real 临时覆盖拖拽时长（默认 0.9s）")
-    parser.add_argument("--multi", action="store_true", help="--real 多条采集：左下→越界顶部 + 更长终点停留")
+    parser.add_argument("--multi", action="store_true", help="--real 多条采集：上边界→越界底部 + 更长终点停留")
     parser.add_argument("--dump", default=None, help="--real 把每次采集的原始剪贴板文本写入文件（诊断用）")
     parser.add_argument("--config", default=None, help="配置文件路径")
     parser.add_argument("--ticks", type=int, default=None, help="tick 数（--real 默认 1）")

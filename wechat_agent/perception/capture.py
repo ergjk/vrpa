@@ -44,11 +44,11 @@ def _sample_end_hold(*, multi: bool = False) -> float:
 
 
 # 首次失败后的恢复轨迹：滚到底部，再从对方气泡下方拖到贴紧上边界。
-_EDGE_DRAG_PLAN: tuple[tuple[float, float], tuple[float, float]] = ((0.08, 0.98), (0.90, 0.00))
+_EDGE_DRAG_PLAN: tuple[tuple[float, float], tuple[float, float]] = ((0.06, 0.02), (0.90, 1.02))
 # 恢复重试轨迹：略高起点，避免首条/末条气泡边缘选不中。
-_RETRY_DRAG_PLAN: tuple[tuple[float, float], tuple[float, float]] = ((0.10, 0.80), (0.90, 0.02))
+_RETRY_DRAG_PLAN: tuple[tuple[float, float], tuple[float, float]] = ((0.08, 0.04), (0.90, 1.00))
 # 多条采集：终点越界（-5%），配合更长停留，尽量一次划到顶部。
-_EDGE_MULTI_DRAG_PLAN: tuple[tuple[float, float], tuple[float, float]] = ((0.08, 0.98), (0.90, -0.05))
+_EDGE_MULTI_DRAG_PLAN: tuple[tuple[float, float], tuple[float, float]] = ((0.06, 0.01), (0.90, 1.03))
 
 
 class WeChatPerception:
@@ -144,7 +144,7 @@ class WeChatPerception:
 
         # 真机规则：首次框选失败 -> 先把消息区滚到底部 -> 贴边由下往上重试一次；
         # 仍失败则放弃（不再盲试多个起点，避免选中旧消息/浪费一轮时间）。
-        multi_message = end[1] < start[1] or drag.to_y < 0 or drag.to_y > 1
+        multi_message = end[1] < start[1] or drag.from_y < 0 or drag.from_y > 1 or drag.to_y < 0 or drag.to_y > 1
         retry_start = (
             area.x + int(round(area.width * _RETRY_DRAG_PLAN[0][0])),
             area.y + int(round(area.height * _RETRY_DRAG_PLAN[0][1])),
