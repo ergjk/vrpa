@@ -82,21 +82,25 @@ def main(argv: list[str] | None = None) -> int:
     labels = yaml.safe_load(labels_path.read_text(encoding="utf-8"))
     if not isinstance(labels, list):
         raise SystemExit(".github/labels.yml 必须是标签数组")
-    for item in labels:
-        _run(
+    existing: set[str] = set()
+    if not args.dry_run:
+        listed = _run(
             gh,
-            [
-                "label",
-                "create",
-                str(item["name"]),
-                "--color",
-                str(item["color"]),
-                "--description",
-                str(item.get("description", "")),
-                "--force",
-            ],
-            dry_run=args.dry_run,
+            ["label", "list", "--repo", args.repo, "--limit", "100", "--json", "name"],
+            dry_run=False,
         )
+        if listed is not None and listed.stdout.strip():
+            existing = {str(item["name"]) for item in json.loads(listed.stdout)}
+    for item in labels:
+        name = str(item["name"])
+        color = str(item["color"])
+        description = str(item.get("description", ""))
+        if name in existing:
+            label_args = ["label", "edit", name, "--color", color, "--description", description]
+        else:
+            label_args = ["label", "create", name, "--color", color, "--description", description]
+        label_args += ["--repo", args.repo]
+        _run(gh, label_args, dry_run=args.dry_run)
     print(f"topics : {len(TOPICS)} 个")
     print(f"labels : {len(labels)} 个")
 
