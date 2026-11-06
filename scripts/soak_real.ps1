@@ -114,7 +114,8 @@ for ($i = 1; $i -le $Iterations; $i++) {
     }
 
     $obj | Add-Member -NotePropertyName iteration -NotePropertyValue $i -Force
-    $obj | ConvertTo-Json -Compress -Depth 12 | Add-Content -Path $jsonl -Encoding UTF8
+    $line = ($obj | ConvertTo-Json -Compress -Depth 12) + [Environment]::NewLine
+    [System.IO.File]::AppendAllText($jsonl, $line, [System.Text.UTF8Encoding]::new($false))
     $results += $obj
 
     $replies = 0
