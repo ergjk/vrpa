@@ -44,11 +44,12 @@ def _sample_end_hold(*, multi: bool = False) -> float:
 
 
 # 首次失败后的恢复轨迹：滚到底部，再从对方气泡下方拖到贴紧上边界。
-_EDGE_DRAG_PLAN: tuple[tuple[float, float], tuple[float, float]] = ((0.06, 0.02), (0.90, 1.02))
+# 起点落在头像列/气泡左侧，横向覆盖“头像-气泡”区；终点越过下边界。
+_EDGE_DRAG_PLAN: tuple[tuple[float, float], tuple[float, float]] = ((0.02, 0.01), (0.95, 1.02))
 # 恢复重试轨迹：略高起点，避免首条/末条气泡边缘选不中。
-_RETRY_DRAG_PLAN: tuple[tuple[float, float], tuple[float, float]] = ((0.08, 0.04), (0.90, 1.00))
+_RETRY_DRAG_PLAN: tuple[tuple[float, float], tuple[float, float]] = ((0.06, 0.03), (0.95, 1.00))
 # 多条采集：终点越界（-5%），配合更长停留，尽量一次划到顶部。
-_EDGE_MULTI_DRAG_PLAN: tuple[tuple[float, float], tuple[float, float]] = ((0.06, 0.01), (0.90, 1.03))
+_EDGE_MULTI_DRAG_PLAN: tuple[tuple[float, float], tuple[float, float]] = ((0.02, 0.01), (0.95, 1.03))
 
 
 class WeChatPerception:
