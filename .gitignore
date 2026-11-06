@@ -11,3 +11,5 @@ data/
 !.env.example
 .DS_Store
 Thumbs.db
+.coverage
+pytest-of-*
