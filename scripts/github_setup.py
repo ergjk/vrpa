@@ -58,7 +58,7 @@ def _run(gh: str, args: list[str], *, dry_run: bool) -> subprocess.CompletedProc
     if dry_run:
         print("DRY-RUN:", " ".join(command))
         return None
-    return subprocess.run(command, check=True, text=True, capture_output=True)
+    return subprocess.run(command, check=True, encoding="utf-8", errors="replace", capture_output=True)
 
 
 def main(argv: list[str] | None = None) -> int:
