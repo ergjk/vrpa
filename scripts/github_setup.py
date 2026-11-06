@@ -96,10 +96,9 @@ def main(argv: list[str] | None = None) -> int:
         color = str(item["color"])
         description = str(item.get("description", ""))
         if name in existing:
-            label_args = ["label", "edit", name, "--color", color, "--description", description]
-        else:
-            label_args = ["label", "create", name, "--color", color, "--description", description]
-        label_args += ["--repo", args.repo]
+            print(f"label exists, skip: {name}")
+            continue
+        label_args = ["label", "create", name, "--color", color, "--description", description, "--repo", args.repo]
         _run(gh, label_args, dry_run=args.dry_run)
     print(f"topics : {len(TOPICS)} 个")
     print(f"labels : {len(labels)} 个")
