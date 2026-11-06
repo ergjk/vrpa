@@ -57,6 +57,25 @@ CAPABILITIES = frozenset({"group_chat", "text_only"})  # 例：QQ 群聊纯文�
 - 必须提供 ≥ 15 份真实样例夹具与 golden 期望；
 - 无法解析时必须降级为「只入库不回复」，并记录 `parser_strategy`。
 
+## 4.5 参考实现：微信适配器（M0-F-05）
+
+本仓库的 `wechat_agent/adapter.py` 是可直接对照的参考实现：
+
+- `WeChatAdapter`：kind / capabilities / config_plugin / element tree profile spec / parser pack / `create_ports()`；
+- `wechat_agent/adapters.py`：`ADAPTER_REGISTRY = AdapterRegistry(); ADAPTER_REGISTRY.register(ADAPTER)`；
+- 验证命令：`python -m vrpa.testing.contracts --adapter wechat_agent.adapter:WeChatAdapter`（10/10 全绿）。
+
+可直接复用的框架构件（无需自己重写）：
+
+| 构件 | 位置 | 用途 |
+|---|---|---|
+| `SQLiteMemoryStore` | `vrpa.memory.store` | 双库 MemoryStore 通用实现（传 `data_dir` 即可） |
+| `ProfileElementTree` | `vrpa.element_tree` | profile JSON 元素树（传 profile 路径/名/元素集合） |
+| `PlatformAdapter` / `AdapterRegistry` | `vrpa.platform` | 适配器契约与注册表 |
+| `contracts` / `fakes` | `vrpa.testing` | 合规套件与无环境 Fake |
+
+策略分发（解析策略执行器）将在 M2 由 `vrpa` 提供，适配器只需提供 `parser_pack` 数据。
+
 ## 5. 注册与装配
 
 ```python

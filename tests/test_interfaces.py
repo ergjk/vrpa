@@ -1,14 +1,11 @@
-"""M0-05 接口契约与红线 R1/R3 静态扫描测试。
+"""M0-05 / M0-F-05 接口契约与红线 R1/R3 静态扫描测试。
 
 覆盖：
-    1. V1.0 五个核心 Protocol 存在且可 runtime_checkable 检查；
+    1. V1.0 五个核心协议已与 ``vrpa.ports`` 统一（同一对象，别名可用）；
     2. Fake 后端满足协议；缺失方法必须被 isinstance 拒绝；
-    3. 所有协议方法体必须是 `...`（空实现），DTO 为 frozen dataclass；
-    4. V1.1/V1.2 五个保留接口存在且为空；
-    5. 红线 R1：保留接口名只允许出现在 core/interfaces.py；
-    6. 红线 R3：interfaces.py 不 import 任何视觉/自动化/LLM 第三方库，也不 import 其它业务模块。
-
-运行：python -m pytest tests/test_interfaces.py -q
+    3. V1.1/V1.2 五个保留接口存在且为空（AST 源码判空）；
+    4. 红线 R1：保留接口名只允许出现在 core/interfaces.py；
+    5. 红线 R3：interfaces.py 不 import 任何视觉/自动化/LLM 第三方库，也不 import 其它业务模块。
 """
 
 from __future__ import annotations
@@ -21,6 +18,7 @@ from pathlib import Path
 
 import pytest
 
+import vrpa.ports as framework_ports
 from wechat_agent.core import interfaces as iface
 from wechat_agent.core.interfaces import (
     CORE_PROTOCOLS,
@@ -35,7 +33,9 @@ from wechat_agent.core.interfaces import (
     LLMResult,
     MemoryHub,
     MemoryItem,
+    Message,
     Perception,
+    Ports,
     Rect,
     SendOutcome,
     UiaTree,
@@ -46,7 +46,7 @@ INTERFACES_FILE = PACKAGE_DIR / "core" / "interfaces.py"
 
 EXPECTED_METHODS: dict[str, set[str]] = {
     "UiaTree": {"element_ids", "locate", "validate", "invalidate", "profile_name"},
-    "Perception": {"activate", "ensure_chat", "capture"},
+    "Perception": {"activate", "switch_session", "capture"},
     "Executor": {"send", "clear_input", "is_dry_run"},
     "Brain": {"generate", "ping"},
     "MemoryHub": {
@@ -83,15 +83,15 @@ class FakePerception:
     def activate(self) -> None:
         return None
 
-    def ensure_chat(self, chat: str) -> None:
+    def switch_session(self, session: str) -> None:
         return None
 
-    def capture(self, chat: str) -> str:
+    def capture(self, session: str) -> str:
         return "张三: 你好"
 
 
 class FakeExecutor:
-    def send(self, chat: str, text: str, *, trigger: str = "auto") -> SendOutcome:
+    def send(self, session: str, text: str, *, trigger: str = "auto") -> SendOutcome:
         return SendOutcome(ok=True, stage="dry_run", detail=text)
 
     def clear_input(self) -> str:
@@ -102,7 +102,7 @@ class FakeExecutor:
 
 
 class FakeBrain:
-    def generate(self, messages, *, chat: str | None = None) -> LLMResult:
+    def generate(self, messages, *, session: str | None = None) -> LLMResult:
         return LLMResult(text="ok", usage={"total_tokens": 1})
 
     def ping(self) -> float:
@@ -110,19 +110,19 @@ class FakeBrain:
 
 
 class FakeMemoryHub:
-    def recent_hashes(self, chat: str, limit: int) -> list[str]:
+    def recent_hashes(self, session: str, limit: int) -> list[str]:
         return []
 
-    def insert_messages(self, chat: str, messages) -> int:
+    def insert_messages(self, session: str, messages) -> int:
         return len(messages)
 
-    def writeback(self, chat: str, text: str) -> int:
+    def writeback(self, session: str, text: str) -> int:
         return 1
 
-    def history(self, chat: str, limit: int) -> list[ChatMessage]:
+    def history(self, session: str, limit: int) -> list[Message]:
         return []
 
-    def recall(self, chat: str | None, query: str, top_k: int) -> list[MemoryItem]:
+    def recall(self, session: str | None, query: str, top_k: int) -> list[MemoryItem]:
         return []
 
     def add_memory(self, item: MemoryItem) -> int:
@@ -135,7 +135,7 @@ class FakeMemoryHub:
 class PartialPerception:
     """只实现了一个方法，不应满足 Perception。"""
 
-    def capture(self, chat: str) -> str:
+    def capture(self, session: str) -> str:
         return ""
 
 
@@ -143,6 +143,18 @@ class PartialPerception:
 def test_interface_version() -> None:
     assert INTERFACE_VERSION == 1
     assert "DO NOT IMPLEMENT" in FUTURE_POLICY
+
+
+def test_core_protocols_are_framework_ports() -> None:
+    """M0-F-05：应用层接口与 vrpa.ports 是同一契约，不允许再重复定义。"""
+    assert UiaTree is framework_ports.ElementTree
+    assert Perception is framework_ports.Perception
+    assert Executor is framework_ports.Executor
+    assert Brain is framework_ports.Brain
+    assert MemoryHub is framework_ports.MemoryStore
+    assert Ports is framework_ports.Ports
+    assert ChatMessage is framework_ports.Message
+    assert Rect is framework_ports.Rect
 
 
 def test_core_protocols_registered_and_are_protocols() -> None:
@@ -177,12 +189,13 @@ def test_partial_implementation_rejected() -> None:
     assert not isinstance(PartialPerception(), Perception)
 
 
-def test_all_protocol_bodies_are_empty_in_source() -> None:
-    """红线 R1：协议类体只允许「docstring + 方法签名」，方法体只允许 `...`。
+def test_all_future_protocol_bodies_are_empty_in_source() -> None:
+    """红线 R1：保留接口类体只允许「docstring + 方法签名」，方法体只允许 `...`。
 
-    说明：CPython 会优化掉裸 `...` 语句，因此用 AST 读源码判空比查 co_consts 可靠。
+    说明：V1.0 核心协议已迁至 vrpa.ports（由 tests/test_framework_ports.py 覆盖），
+    本文件只对 V1.1/V1.2 预留接口做源码判空。
     """
-    protocols = {**CORE_PROTOCOLS, **FUTURE_INTERFACES}
+    protocols = dict(FUTURE_INTERFACES)
     source = INTERFACES_FILE.read_text(encoding="utf-8")
     tree = ast.parse(source)
 
@@ -284,3 +297,4 @@ def test_r3_interfaces_module_is_pure() -> None:
     assert re.search(r"(?m)^\s*(import|from)\s+wechat_agent\b", text) is None, (
         "interfaces.py 不允许 import 其它 wechat_agent 模块（零依赖纪律）"
     )
+    assert "from vrpa.ports import" in text, "M0-F-05 起接口必须复用 vrpa.ports"

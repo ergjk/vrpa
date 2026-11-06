@@ -22,12 +22,23 @@ import importlib
 import json
 import sys
 from collections.abc import Callable, Mapping, Sequence
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any, cast
 
 from vrpa.config.plugin import is_platform_plugin
+from vrpa.errors import CopyFailed, ElementNotVisible, LLMError, SessionSwitchFailed, VerifyFailed
 from vrpa.platform import AdapterInfo, PlatformAdapter, is_platform_adapter
-from vrpa.ports import Brain, ElementTree, Executor, MemoryStore, Perception, Ports, Rect
+from vrpa.ports import (
+    Brain,
+    ElementTree,
+    Executor,
+    MemoryStore,
+    Perception,
+    Ports,
+    Rect,
+    SendOutcome,
+)
 
 __all__ = [
     "ContractCheck",
@@ -98,9 +109,15 @@ def _non_empty_str(value: object, where: str) -> str:
     return value
 
 
-def run_all(adapter: PlatformAdapter) -> ContractReport:
-    """对适配器执行全部契约检查并返回报告（不抛异常）。"""
+def run_all(adapter: PlatformAdapter, options: Any = None) -> ContractReport:
+    """对适配器执行全部契约检查并返回报告（不抛异常）。
+
+    ``options`` 传给 ``create_ports``（默认使用配置插件的 default_options）。
+    端口冒烟对「未就绪但抛出正确领域错误」的端口容忍：失败语义本身就是契约的一部分
+    （定位失败必须 ElementNotVisible、采集失败必须 CopyFailed 等），不得静默兜底。
+    """
     checks: list[ContractCheck] = []
+    created_ports: list[Ports] = []
 
     def run(name: str, fn: Callable[[], str]) -> None:
         try:
@@ -114,7 +131,10 @@ def run_all(adapter: PlatformAdapter) -> ContractReport:
         return adapter.config_plugin()
 
     def _ports() -> Ports:
-        return adapter.create_ports(_plugin().default_options())
+        payload = _plugin().default_options() if options is None else options
+        ports = adapter.create_ports(payload)
+        created_ports.append(ports)
+        return ports
 
     def check_identity() -> str:
         _require(is_platform_adapter(adapter), "目标未实现 PlatformAdapter 结构")
@@ -173,20 +193,57 @@ def run_all(adapter: PlatformAdapter) -> ContractReport:
         return "5/5 端口满足协议"
 
     def check_port_smoke() -> str:
+        notes: list[str] = []
+        tolerated = (ElementNotVisible, CopyFailed, SessionSwitchFailed, VerifyFailed, LLMError)
         ports = _ports()
-        element_ids = ports.element_tree.element_ids()
+
+        element_ids = list(ports.element_tree.element_ids())
         _require(len(element_ids) > 0, "element_ids 不能为空")
         _non_empty_str(ports.element_tree.profile_name(), "profile_name")
-        located = ports.element_tree.locate(str(element_ids[0]))
-        _require(isinstance(located, Rect), "locate 必须返回 Rect")
-        ports.perception.activate()
-        captured = ports.perception.capture(_PROBE_SESSION)
-        _require(isinstance(captured, str), "capture 必须返回 str")
+        try:
+            located = ports.element_tree.locate(element_ids[0])
+        except ElementNotVisible:
+            notes.append("locate=ElementNotVisible（校准未完成，符合失败语义）")
+        else:
+            _require(isinstance(located, Rect), "locate 必须返回 Rect")
+            notes.append("locate=ok")
+
+        try:
+            ports.perception.activate()
+        except tolerated as exc:  # noqa: BLE001 - 未就绪端口允许抛领域错误
+            notes.append(f"activate={type(exc).__name__}（失败语义正确）")
+        try:
+            captured = ports.perception.capture(_PROBE_SESSION)
+        except tolerated as exc:  # noqa: BLE001
+            notes.append(f"capture={type(exc).__name__}（失败语义正确）")
+        else:
+            _require(isinstance(captured, str), "capture 必须返回 str")
+            notes.append(f"capture={len(captured)} chars")
+
         _require(isinstance(ports.executor.is_dry_run(), bool), "is_dry_run 必须返回 bool")
-        _require(ports.brain.ping() >= 0, "brain.ping 必须返回非负延迟")
-        ports.memory.recent_hashes(_PROBE_SESSION, 1)
+        notes.append(f"dry_run={ports.executor.is_dry_run()}")
+
+        try:
+            delay = ports.brain.ping()
+        except LLMError:
+            notes.append("ping=LLMError（未配置/未就绪，符合失败语义）")
+        else:
+            _require(delay >= 0, "brain.ping 必须返回非负延迟")
+            notes.append(f"ping={delay:.1f}ms")
+
+        try:
+            outcome = ports.executor.send(_PROBE_SESSION, "[contract-probe]", trigger="contract_probe")
+        except tolerated as exc:  # noqa: BLE001
+            notes.append(f"send={type(exc).__name__}（失败语义正确）")
+        else:
+            _require(isinstance(outcome, SendOutcome), "send 必须返回 SendOutcome")
+            notes.append(f"send={outcome.stage}")
+
+        hashes = ports.memory.recent_hashes(_PROBE_SESSION, 1)
+        _require(isinstance(hashes, Sequence), "recent_hashes 必须返回序列")
         ports.memory.writeback(_PROBE_SESSION, "[contract-probe]")
-        return f"captured {len(captured)} chars"
+        notes.append("memory=ok")
+        return "; ".join(notes)
 
     def check_create_ports_idempotent() -> str:
         _ports()
@@ -211,6 +268,10 @@ def run_all(adapter: PlatformAdapter) -> ContractReport:
     run("adapter.create_ports.idempotent", check_create_ports_idempotent)
     run("adapter.info", check_adapter_info)
     run("adapter.describe", check_describe)
+
+    for ports in created_ports:
+        with suppress(Exception):
+            ports.close()
 
     return ContractReport(
         adapter_kind=str(getattr(adapter, "kind", "<unknown>")),

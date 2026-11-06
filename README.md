@@ -1,7 +1,7 @@
 # VRPA-WeChat-Agent
 
 > **VRPA（Vision RPA）通用 RPA 框架底座 + 微信参考实现** · MIT License
-> 状态：**M0 框架底座已完成**（191 项测试全绿 · 覆盖率 90.55% · ruff / mypy strict 全绿）
+> 状态：**M0 框架底座已完成（M0-F-01 ~ M0-F-05）**（211 项测试全绿 · 覆盖率 90.49% · ruff / mypy strict 全绿）
 
 ---
 
@@ -54,13 +54,13 @@
 
 | 能力 | 说明 | 状态 |
 |---|---|---|
-| 双库存储引擎 | 流水库（历史上下文）+ 核心档案库（长期记忆）双库分离；WAL、幂等迁移、预迁移备份、FTS5 全文检索、软删 | 已实现 M0-06（当前实现在 `wechat_agent/memory`；框架化迁移见 ADR-0001） |
+| 双库存储引擎 | 流水库（历史上下文）+ 核心档案库（长期记忆）双库分离；WAL、幂等迁移、预迁移备份、FTS5 全文检索、软删 | 已实现 M0-06；M0-F-05 引擎已上提 `vrpa.memory`（应用仅保留薄适配） |
 | 异常与退出码契约 | 统一异常家族 + 进程退出码（0/1/2/3/4/5/6/7/8/130），`to_dict`/`to_audit` 结构化、自动脱敏 | 已实现 M0-04 |
 | 日志 / 审计 / 脱敏 | RotatingFileHandler、trace_id 贯穿、JSONL 审计、API Key / 手机号 / 身份证 / 邮箱打码 | 已实现 M0-03 |
 | 配置内核 | 通用配置加载、校验、环境变量覆盖（`VRPA_*`），平台字段由适配器插件校验 | 已完成 M0-F-03 |
 | 拟人化调度队列 | 优先级 FIFO、跨会话轮转、限流 / 静默时段、可打断的拟人延迟（思考 / 打字 / 发送节奏） | 规划中 M4 |
 | 视觉锚点匹配 | 元素树 profile + 多尺度模板匹配定位（失败即中止，禁止坐标兜底），供各平台适配器复用 | 规划中 M1（微信参考实现先行，随后按端口契约抽入 `vrpa`） |
-| 平台适配器契约 | `PlatformAdapter` 协议 + `AdapterRegistry` + **适配器合规测试套件**（`vrpa.testing.contracts`，第三方实现必须全绿才能接入） | 已实现 M0-F-04 |
+| 平台适配器契约 | `PlatformAdapter` 协议 + `AdapterRegistry` + **适配器合规测试套件**（`vrpa.testing.contracts`，第三方实现必须全绿才能接入） | 已实现 M0-F-04（微信适配器 M0-F-05 全绿接入） |
 
 ### 3.2 应用层特性（由 `wechat_agent` 提供，可作为适配器示例）
 
@@ -73,6 +73,7 @@
 | 发送三重校验 | 会话 / 焦点 / 内容三校验通过才回车；失败清空重试，绝不重发 | 规划中 M6 |
 | HITL 控制台 | 暂停/恢复、人设热更新、记忆查询、`/say` 接管、急停热键 | 规划中 M6 |
 | 可插拔插件 | 插件协议 + `#发圈` 示例（默认关闭） | 规划中 M6 |
+| 微信适配器装配 | `WeChatAdapter` 实现 `PlatformAdapter` 并注册到 `ADAPTER_REGISTRY`；`create_ports()` 组装记忆 / 元素树 / 感知 / 执行 / 推理五端口（记忆已可用，其余按 M1/M2/M5/M6 就绪） | 已实现 M0-F-05 |
 
 ---
 
@@ -83,20 +84,23 @@ vrpa/                     # 通用框架底座（可独立发布/复用）
   __init__.py             #   框架版本 + 契约版本 INTERFACE_VERSION
   logging.py              #   日志 / 审计 / trace_id / 脱敏（命名空间可配置）
   errors.py               #   平台无关异常族 + 退出码契约
+  element_tree.py         #   通用 profile 元素树（严格失败语义，M0-F-05）
+  memory/                 #   双库引擎：schema.sql / 迁移 / 备份 / SQLite MemoryStore（M0-F-05）
   config/                 #   配置内核：env / validators / plugin / loader（v1 -> v2 升级）
   ports.py                #   五端口协议 + 跨层 DTO（M0-F-04）
   platform.py             #   PlatformAdapter 协议 + AdapterRegistry（M0-F-04）
   testing/                #   Fakes + contracts 合规测试套件（M0-F-04）
-tests/                    # 191 项测试（配置/日志/异常/接口/双库/CLI/端口/契约/兼容 shim）
+tests/                    # 211 项测试（配置/日志/异常/接口/双库/CLI/端口/契约/兼容 shim）
 docs/                     # 技术方案、行动清单、架构、ADR、适配器指南
 scripts/quality.ps1|.bat  # 一键质量门禁（ruff + mypy strict + pytest + coverage）
 wechat_agent/             # 微信参考实现（六层模块见 §5.1）
   main.py                 #   CLI 入口 / 子命令注册 / 退出码映射
-  core/                   #   配置、日志、异常 shim、接口契约
-  memory/                 #   双库（chat_history.db / memory.db）+ schema.sql
-  perception/ brain/      #   假 UIA 树 / 采集 / 解析（M1-M2）；推理（M5）
-  act/ control/           #   执行层（M6）；控制台（M6）
-  plugins/ tools/         #   插件接口（M6）；校准 / 回放 / doctor 工具
+  adapter.py adapters.py  #   WeChatAdapter（五端口装配）+ ADAPTER_REGISTRY（M0-F-05）
+  core/                   #   配置、日志、异常 shim、接口契约（与 vrpa.ports 统一）
+  memory/                 #   双库门面 shim + Config 薄适配（引擎已上提 vrpa.memory）
+  perception/             #   ProfileElementTree 绑定 + 剪贴板采集 Perception（M1-M2）
+  brain/ act/             #   推理 Brain（M5）；执行 Executor（M6，干跑已可用）
+  control/ plugins/ tools/  #   控制台（M6）；插件（M6）；校准 / 回放 / doctor 工具
 ```
 
 ---
@@ -107,10 +111,10 @@ wechat_agent/             # 微信参考实现（六层模块见 §5.1）
 
 | 层 | 组件 | 职责 | 状态 |
 |---|---|---|---|
-| 感知层 | `pywinauto` + 假 UIA 树 + `pyperclip` | 定位界面元素、框选并复制消息文本 | 规划中 M1-M2 |
-| 记忆层 | SQLite 双库 + 去重对齐 | 流水去重、长期记忆提炼与召回 | 规划中 M3（表结构已实现 M0-06） |
-| 推理层 | DeepSeek / OpenAI 兼容 API | 上下文组装、回复生成与清洗 | 规划中 M5 |
-| 执行层 | `pyautogui` + 三重校验 | 粘贴、校验、回车、状态回写 | 规划中 M6 |
+| 感知层 | `pywinauto` + 假 UIA 树 + `pyperclip` | 定位界面元素、框选并复制消息文本 | 规划中 M1-M2（ElementTree / Capture 端口已接线，M0-F-05） |
+| 记忆层 | SQLite 双库 + 去重对齐 | 流水去重、长期记忆提炼与召回 | 规划中 M3（双库 M0-06；MemoryStore 端口 M0-F-05 可用） |
+| 推理层 | DeepSeek / OpenAI 兼容 API | 上下文组装、回复生成与清洗 | 规划中 M5（Brain 端口已接线，M0-F-05） |
+| 执行层 | `pyautogui` + 三重校验 | 粘贴、校验、回车、状态回写 | 规划中 M6（Executor 端口已接线，dry_run 可用，M0-F-05） |
 | 控制层 | CLI 控制台 | 暂停/恢复、人设热更新、`/say` 接管 | 规划中 M6 |
 | 扩展层 | 插件协议 + Task Scheduler | `#发圈` 等 RPA 指令 | 规划中 M6 |
 
@@ -181,6 +185,8 @@ python -m wechat_agent run                     # M6（正式运行，建议先�
 5. 实现 `PlatformAdapter` 并注册到 `AdapterRegistry`；
 6. 跑合规测试套件 `python -m vrpa.testing.contracts --adapter <模块>:<类> --json`（M0-F-04 已交付）与 `scripts\quality.bat`，全绿即接入成功。
 
+> 参考实现：本仓库微信适配器即样例——`python -m vrpa.testing.contracts --adapter wechat_agent.adapter:WeChatAdapter`（M0-F-05 起 10/10 全绿），可对照 `wechat_agent/adapter.py` + `wechat_agent/adapters.py` 实现。
+
 ---
 
 ## 7. 运行环境与依赖
@@ -197,7 +203,7 @@ python -m wechat_agent run                     # M6（正式运行，建议先�
 
 ```powershell
 .\scripts\quality.bat          # 一键：ruff check → ruff format → mypy strict → pytest+coverage
-python -m pytest tests -q     # 单元测试（当前 191 passed）
+python -m pytest tests -q     # 单元测试（当前 211 passed）
 python -m mypy                # vrpa 框架包 strict
 ```
 
@@ -206,8 +212,8 @@ python -m mypy                # vrpa 框架包 strict
 | 静态检查 | ruff（E/F/I/UP/B/SIM） | 全绿 |
 | 格式 | ruff format | 全绿 |
 | 类型 | mypy strict（`vrpa`） | 0 error |
-| 测试 | pytest | 191 passed |
-| 覆盖率 | pytest-cov | 90.55%（门禁 ≥85%） |
+| 测试 | pytest | 211 passed |
+| 覆盖率 | pytest-cov | 90.49%（门禁 ≥85%） |
 | 一键 | `scripts\quality.bat` | `QUALITY GATE: PASS` |
 
 ---

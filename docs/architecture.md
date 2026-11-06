@@ -32,6 +32,8 @@ vrpa/                       # 框架底座（可独立发布为 vrpa）
 ├── errors.py                  #   异常族 + ExitCode 单真源
 ├── ports.py                   #   ElementTree / Perception / Executor / Brain / MemoryStore + DTO
 ├── platform.py                #   PlatformAdapter 协议 + AdapterRegistry + 能力声明
+├── element_tree.py            #   通用 profile 元素树（严格失败语义，M0-F-05）
+├── memory/                    #   双库引擎：DDL/迁移/备份/自检 + SQLite MemoryStore（M0-F-05）
 ├── cli.py                     #   通用 CLI 骨架（注册表/退出码/异常兜底/帮助）
 └── testing/
     ├── fakes.py               #   Fake 全套（M4 全链路依赖）
@@ -58,6 +60,13 @@ wechat_agent/                  # 微信应用 + 微信适配器
 - **Contracts kit**：`vrpa.testing.contracts.run_all(adapter_factory)`，覆盖端口行为、失败语义（不得兜底猜坐标）、消息流边界（图像识别不得出现在消息路径）。
 
 「可替换感知层」的判定标准：**第三方适配器能通过 contracts kit 全绿**，而不是文档上说"支持"。
+
+**平台通用逻辑归属（M0-F-05 收口）**：
+
+- 双库引擎（`vrpa/memory/db.py` + `schema.sql`）、`SQLiteMemoryStore`（`vrpa/memory/store.py`）、
+  profile 元素树（`vrpa/element_tree.py`）已上提框架；`wechat_agent` 只保留「Config 绑定 + 微信字段」薄适配。
+- **解析策略分发（Strategy Dispatcher）**：策略执行器由 `vrpa` 在 M2 提供（`parser_pack` 目前仅声明策略名与
+  样例要求）；应用层不承载分发逻辑，也不允许按平台写分支。
 
 ## 5. 兼容策略（已批准）
 
@@ -88,7 +97,7 @@ wechat_agent/                  # 微信应用 + 微信适配器
 | M0-F-02 | `vrpa` 包：logging / errors / config 内核迁移 + `wechat_agent.core.*` shim | 旧 import 全部可用且打 warning；新包测试通过；mypy strict 生效 |
 | M0-F-03（已完成） | 配置 schema v2：`platform:` 命名空间 + 插件式校验 + `VRPA_*` | 旧 `wechat:` 配置自动升级；`selftest` 输出平台信息 |
 | M0-F-04（已完成） | `ports.py` / `platform.py` / `AdapterRegistry` / `testing.contracts` / `testing.fakes` | contracts kit 可运行；Fake 适配器全绿；反例可检出 |
-| M0-F-05 | 微信适配器注册 + 应用层去框架化（memory/brain/act/control 接 ports） | M1/M2 实现类可注入 Mock；import 边界测试通过 |
+| M0-F-05（已完成） | 微信适配器注册 + 应用层去框架化（memory/brain/act/control 接 ports） | `WeChatAdapter` 接入 `AdapterRegistry`；应用接口与 `vrpa.ports` 统一；契约套件 10/10 全绿 |
 | M0-F-06 | 弃用清理、指南定稿、README/CHANGELOG 更新 | 无 DeprecationWarning；文档评审通过 |
 
 ## 8. 与 V1.0 功能里程碑的关系

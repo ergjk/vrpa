@@ -36,10 +36,24 @@
   - `vrpa/testing/contracts.py`：适配器合规测试套件（10 项检查）+ CLI `python -m vrpa.testing.contracts --adapter 模块:属性 [--json]`
   - 判定标准：Fake 适配器全绿、反例可检出；第三方适配器必须全绿才能接入
 
+- M0-F-05 应用层去框架化与微信适配器：
+  - `wechat_agent/core/interfaces.py`：与 `vrpa.ports` 统一（`UiaTree = ElementTree`、`MemoryHub = MemoryStore`、`ChatMessage = Message`），V1.1/V1.2 保留接口仍在应用层
+  - `wechat_agent/adapter.py`：`WeChatAdapter` 实现 `PlatformAdapter`，`create_ports()` 装配五端口
+  - `wechat_agent/adapters.py`：`ADAPTER_REGISTRY`（`vrpa.platform.AdapterRegistry` 实例）
+  - 微信端口实现：`memory/store.py`（双库 MemoryStore：写入 / 历史 / 哈希 / 召回 / 软删）、`perception/element_tree.py`（profile 读取 + 严格 `ElementNotVisible`）、`perception/capture.py`、`act/executor.py`（dry_run 可用）、`brain/client.py`
+  - `core/config.py`：平台插件经 `WeChatAdapter.config_plugin()` 装配；selftest 新增 `adapter` 检查
+  - `vrpa.testing.contracts`：端口冒烟容忍「未就绪但失败语义正确」的领域错误；`run_all(adapter, options)` 支持注入配置
+  - 微信适配器契约套件 **10/10 全绿**（CLI 可直接验证）
+
+### Changed
+- M0-F-05 框架化收口（按主控官指示：`wechat_agent` 降级为纯适配器插件，通用逻辑上提 `vrpa`）：
+  - 双库引擎 `wechat_agent/memory/` -> `vrpa/memory/`（`db.py` 引擎 + `schema.sql` 去平台化）；应用层仅保留 db-check CLI 与引擎 API 再导出
+  - `SQLiteMemoryStore` 上提 `vrpa/memory/store.py`（入参 `data_dir`）；`wechat_agent/memory/store.py` 退化为 `Config -> data_dir` 薄适配
+  - `ProfileElementTree` 上提 `vrpa/element_tree.py`；微信侧只保留 required 元素集合与 Config 绑定
+  - 端口资源释放：`Ports.close()` + 契约套件自动关闭 DB 连接，测试在 `-W error::ResourceWarning` 下干净通过
+  - 解析策略分发（Strategy Dispatcher）确定由 `vrpa` 在 M2 提供，应用层只提供 parser pack
+
 ### Planned
-- M0-F-03：配置 schema v2（`platform:` 命名空间 + 平台插件式校验）
-- M0-F-04：`PlatformAdapter` 协议 + 适配器注册表 + 合规测试套件 `vrpa.testing.contracts`
-- M0-F-05：微信适配器注册、应用层去框架化
 - M0-F-06：弃用清理、适配器编写指南定稿
 - M0-07：环境体检 `doctor`
 - M0-08：控制台骨架

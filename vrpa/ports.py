@@ -84,7 +84,7 @@ class Message:
     role: str = "user"  # user | assistant | system
     sender: str | None = None
     ts: str | None = None
-    source: str = "capture"  # capture | writeback | override | plugin
+    source: str = "rpa_capture"  # rpa_capture | self_writeback | console_override | plugin
     status: str = "ok"  # ok | recalled | pending_confirm | failed
 
 
@@ -263,3 +263,10 @@ class Ports:
             "brain": self.brain,
             "memory": self.memory,
         }
+
+    def close(self) -> None:
+        """释放端口持有的外部资源（如 DB 连接）；无资源端口为 no-op。"""
+        for port in (self.element_tree, self.perception, self.executor, self.brain, self.memory):
+            close = getattr(port, "close", None)
+            if callable(close):
+                close()

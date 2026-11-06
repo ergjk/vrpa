@@ -65,7 +65,8 @@ from vrpa.config.validators import (
     section as _section,
 )
 from vrpa.errors import ConfigError
-from wechat_agent.config.wechat_schema import WechatPlatformOptions, WechatPlatformPlugin
+from vrpa.platform import AdapterInfo
+from wechat_agent.config.wechat_schema import WechatPlatformOptions
 
 DEFAULT_CONFIG_NAME = "config.yaml"
 SUPPORTED_SCHEMA = SCHEMA_VERSION
@@ -95,9 +96,19 @@ _PROFILE_RE = re.compile(r"^\d{3,5}x\d{3,5}@\d+(?:\.\d+)?$")
 _QUIET_RE = re.compile(r"^([01]?\d|2[0-3]):[0-5]\d-([01]?\d|2[0-3]):[0-5]\d$")
 _ENV_KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
-# 平台插件注册表：应用层注册微信插件；框架内核保持平台无关
-PLATFORM_REGISTRY = PlatformRegistry()
-PLATFORM_REGISTRY.register(WechatPlatformPlugin())
+# 平台插件注册表：由微信适配器的 config_plugin() 装配（懒加载，避免模块导入环）
+_platform_registry: PlatformRegistry | None = None
+
+
+def platform_registry() -> PlatformRegistry:
+    global _platform_registry
+    if _platform_registry is None:
+        from wechat_agent.adapter import WeChatAdapter  # 延迟导入：config <-> adapter 循环防护
+
+        registry = PlatformRegistry()
+        registry.register(WeChatAdapter().config_plugin())
+        _platform_registry = registry
+    return _platform_registry
 
 
 # ============================================================================
@@ -405,7 +416,7 @@ def _parse_platform(raw: Mapping[str, Any]) -> tuple[str, str, WechatConfig]:
     platform_raw = _section(raw, "platform")
     _check_keys(platform_raw, ("kind", "options"), "platform")
     kind = _as_str(platform_raw.get("kind"), "platform.kind")
-    plugin = PLATFORM_REGISTRY.get(kind)
+    plugin = platform_registry().get(kind)
     options_raw = _expect_mapping(platform_raw.get("options"), "platform.options")
     merged = merge_defaults(plugin.default_options(), options_raw)
     parsed = plugin.validate_options(merged)
@@ -661,7 +672,7 @@ def load_config(path: str | os.PathLike[str] | None = None) -> Config:
 
     raw, migration = load_document(
         config_path,
-        legacy_sections=PLATFORM_REGISTRY.legacy_section_map(),
+        legacy_sections=platform_registry().legacy_section_map(),
     )
     migrations: tuple[str, ...] = ()
     if migration is not None:
@@ -796,6 +807,26 @@ def _run_db_self_check(cfg: Config) -> dict[str, Any]:
     return {"ok": ok, "detail": detail, "databases": databases}
 
 
+def _adapter_self_check(cfg: Config) -> dict[str, Any]:
+    """经 AdapterRegistry 装配当前平台适配器，输出身份与能力（M0-F-05）。"""
+    try:
+        from wechat_agent.adapters import ADAPTER_REGISTRY
+
+        adapter = ADAPTER_REGISTRY.get(cfg.platform_kind)
+        info = AdapterInfo.from_adapter(adapter)
+    except Exception as exc:  # noqa: BLE001 - 自检不允许抛出，落成 FAIL 项
+        return {"ok": False, "detail": f"适配器装配失败：{exc}"}
+    capabilities = ",".join(info.capabilities)
+    return {
+        "ok": True,
+        "kind": info.kind,
+        "display_name": info.display_name,
+        "version": info.adapter_version,
+        "capabilities": list(info.capabilities),
+        "detail": f"{info.kind} v{info.adapter_version} caps={capabilities}",
+    }
+
+
 def build_selftest_report(cfg: Config) -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
 
@@ -812,6 +843,8 @@ def build_selftest_report(cfg: Config) -> dict[str, Any]:
     add("config", True, f"schema={cfg.schema} path={cfg.path}")
 
     add("platform", True, f"kind={cfg.platform_kind} plugin={cfg.platform_plugin}")
+    adapter_info = _adapter_self_check(cfg)
+    add("adapter", adapter_info["ok"], adapter_info["detail"])
 
     try:
         re.compile(cfg.wechat.window_title_regex)
@@ -867,6 +900,7 @@ def build_selftest_report(cfg: Config) -> dict[str, Any]:
         "ok": ok,
         "config": {"path": str(cfg.path), "schema": cfg.schema},
         "platform": {"kind": cfg.platform_kind, "plugin": cfg.platform_plugin},
+        "adapter": adapter_info,
         "migrations": list(cfg.migrations),
         "display": {
             "width": cfg.display.width,
@@ -907,6 +941,7 @@ def render_selftest(report: Mapping[str, Any]) -> str:
         f"CONFIG OK  path={config['path']}  schema={config['schema']}",
         f"platform   : kind={report.get('platform', {}).get('kind', '-')}"
         f"  plugin={report.get('platform', {}).get('plugin', '-')}",
+        f"adapter    : {report.get('adapter', {}).get('detail', '-')}",
         f"display    : {display['width']}x{display['height']} @{display['dpi_scale']}"
         f"  profile={display['profile']}  detected={display['detected']}",
         f"data_dir   : {report['data_dir']}",
