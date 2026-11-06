@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 安全漏洞（请勿公开）
+    url: https://github.com/ergjk/vrpa/security/advisories/new
+    about: API Key、dry_run 绕过、消息泄露等安全问题请走私密报告
+  - name: 使用与联调说明
+    url: https://github.com/ergjk/vrpa#readme
+    about: 先阅读 README 的安全边界、真机联调现状与命令说明

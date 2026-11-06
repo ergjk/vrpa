@@ -1,0 +1,69 @@
+# 仓库标签定义（供 gh / label-sync 使用，手动维护）
+#
+# 约定：
+#   - 领域：area/*
+#   - 优先级：P0/P1/P2/P3
+#   - 状态/风险：real-machine / needs-repro / blocked / safety
+#   - 版本：v1.0 / v1.1 / v1.2
+#   - 默认标签（bug / enhancement / documentation / good first issue / help wanted / wontfix）保留
+
+- name: area/capture
+  color: "fbca04"
+  description: 框选、剪贴板、采集重试、capture_info
+- name: area/vision
+  color: "1d76db"
+  description: 窗口、DPI、校准、锚点、模板匹配
+- name: area/llm
+  color: "5319e7"
+  description: Prompt、LLM 客户端、人设、知识库
+- name: area/scheduling
+  color: "c2e0c6"
+  description: 队列、限流、拟人延迟、编排、浸泡
+- name: area/memory
+  color: "006b75"
+  description: 双库、去重、长期记忆、任务
+- name: area/executor
+  color: "d93f0b"
+  description: 三重校验、dry_run、真实发送
+- name: area/cli
+  color: "bfd4f2"
+  description: CLI、doctor、calibrate、probe、run
+- name: area/docs
+  color: "0075ca"
+  description: README、文档、示例、变更记录
+
+- name: P0
+  color: "b60205"
+  description: 阻断联调/数据错误/安全问题
+- name: P1
+  color: "d93f0b"
+  description: 当前里程碑必须完成
+- name: P2
+  color: "fbca04"
+  description: 下个里程碑
+- name: P3
+  color: "0e8a16"
+  description: 有空再做
+
+- name: real-machine
+  color: "5319e7"
+  description: 需要真机/管理员 PowerShell 验证
+- name: needs-repro
+  color: "d4c5f9"
+  description: 等待复现步骤、dump 或 capture_info
+- name: blocked
+  color: "000000"
+  description: 被外部条件阻塞
+- name: safety
+  color: "b60205"
+  description: R3、dry_run、密钥、发送边界、权限
+
+- name: v1.0
+  color: "1d76db"
+  description: V1.0 真机 dry-run / 验收
+- name: v1.1
+  color: "c5def5"
+  description: V1.1 表情/语音/撤回/插件
+- name: v1.2
+  color: "c5def5"
+  description: V1.2 学习型操作/行为克隆

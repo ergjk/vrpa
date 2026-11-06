@@ -1,0 +1,84 @@
+name: Bug 报告
+description: 报告可复现的缺陷（请先阅读 SECURITY.md，勿贴密钥/聊天原文）
+title: "[bug] "
+labels:
+  - bug
+  - needs-repro
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。提交前请确认：
+        - 已阅读 `SECURITY.md`，**不要**粘贴 API Key、`.env`、真实聊天记录；
+        - 日志/截图请脱敏；
+        - 真机问题请附 `capture_info`、必要时附 `run --real --dump` 的脱敏片段。
+  - type: textarea
+    id: summary
+    attributes:
+      label: 问题描述
+      description: 发生了什么？影响范围？
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 从启动到出错的完整命令/步骤
+      placeholder: |
+        1. 管理员 PowerShell 启动
+        2. 执行 ...
+        3. 观察到 ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为 / 错误输出
+      description: 请脱敏；可贴 JSON、capture_info、traceback
+      render: text
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: 运行模式
+      options:
+        - pytest / 单元测试（Fake，无真实 UI）
+        - run --simulate（Fake 全链路）
+        - run --real --multi（真机 dry-run）
+        - run --real（真机单条 dry-run）
+        - probe / calibrate / doctor
+        - 其他
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: 环境
+      description: Windows 版本 / Python / 微信版本 / 分辨率 / DPI / 是否管理员
+      placeholder: Windows 11 23H2 / Python 3.14.7 / 微信 4.x / 1920x1080@1.5 / 管理员
+    validations:
+      required: true
+  - type: textarea
+    id: capture_info
+    attributes:
+      label: capture_info / dump（真机问题必填）
+      description: 从 run --real 的 JSON 中复制，dump 请脱敏后截取
+      render: json
+    validations:
+      required: false
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: 安全确认
+      options:
+        - label: 我确认未粘贴真实 API Key、.env、完整聊天记录
+          required: true
+        - label: 本次复现中 dry_run=true（或已明确标注 dry_run=false 的授权测试）
+          required: true

@@ -5,6 +5,34 @@
 
 ## [Unreleased]
 
+### 真机联调（微信 4.x / Windows）
+
+- 微信 4.x 适配：进程名 `Weixin.exe`、win32 优先 + UIA 兜底、Per-Monitor DPI 感知；
+- 校准：`main_window` / `message_area` 容器静态矩形，控件锚点匹配；自动缩放、倒计时、标题提示；
+- 采集：剪贴板哨兵、失败回底（滚轮 + `Ctrl+End`）重试、普通/多条两种轨迹、终点按住停留（普通 2~3s，多条 3~5s）、`capture_info` 诊断；
+- 多条模式 `run --real --multi`：先回底，再从消息区左下贴边/越界向上框选，一次入库多条；
+- 解析：微信 4.x `wechat_block` 三段式（发送者 / 中文日期时间 / 内容）；
+- 去重：尾部锚点允许跳过窗口外消息（如 dry-run 未发送的 `out`），避免整批误丢；
+- 身份映射：`data/identity.toml`（手写 TOML，可选），解决“备注 ≠ 昵称”的切会话校验；
+- 真实 dry-run：`run --real` 打通采集→解析→去重入库→LLM→dry_run 三重校验→回写，输出 `timing` / `capture_info`；
+- 安全：`dry_run=true` 强制、真实发送开关未开放；测试隔离真实 `.env` 与付费 API。
+
+### Quality
+
+- 541 passed；覆盖率 86.67%（门禁 ≥85%）；
+- ruff check / ruff format --check / mypy strict 全绿。
+
+### Planned
+
+- 切会话提速（合并校验采集与主采集）；
+- 多回复/队列消化（`--max-replies` 或 ticks）；
+- 真实浸泡 + 真机验收清单逐项确认；
+- 群聊身份映射与联调；
+- GUI 托盘控制台；
+- 真机验收通过后打 tag `v1.0.0`，再灰度真实发送。
+
+## [0.6.0] - 2026-11-07
+
 ### Changed
 - 框架包名最终定名 **`vrpa`（Vision RPA）**；旧包名兼容 shim 已彻底移除；环境变量统一 `VRPA_*`（应用层保留 `WECHAT_AGENT_*` 回退）
 
@@ -143,10 +171,8 @@
   - 测试：515 passed / 88.28%
 
 ### Planned
-- M0 ~ M6 全部里程碑已完成；后续为真机验收与 GUI 托盘接入
-- M0-07：环境体检 `doctor`
-- M0-08：控制台骨架
-- M0-09：红线自检 `selftest --redlines`
+- M0 ~ M6 全部里程碑已完成；M0-07 `doctor` 已交付。
+- 后续：真机验收、GUI 托盘、V1.1/V1.2（详见顶部 Unreleased）。
 
 ## [0.1.0] - 2026-11-06
 
@@ -158,3 +184,5 @@
 - M0-05 接口契约：5 个核心 Protocol、6 个 DTO、V1.1/V1.2 空接口、R1/R3 静态扫描
 - M0-06 双库与迁移：`schema.sql` 单一真源、WAL、预迁移备份、`db-check --schema/--repair`
 - M0-F-01 框架治理基线：ADR 0001-0003、目标架构文档、适配器编写指南、`pyproject.toml`、`scripts/quality.ps1`
+
+[0.6.0]: https://github.com/ergjk/vrpa/releases/tag/v0.6.0

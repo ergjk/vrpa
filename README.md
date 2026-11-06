@@ -346,6 +346,8 @@ python -m mypy                # vrpa 框架包 strict
 
 ---
 
+> 项目治理：[SECURITY.md](SECURITY.md)（安全边界与私密报告） · [CHANGELOG.md](CHANGELOG.md)（变更记录） · [CONTRIBUTING.md](CONTRIBUTING.md)（开发与提交规范） · [.github/labels.yml](.github/labels.yml)（标签定义）
+
 ## 13. 交付进度与当前联调位置
 
 | 阶段 | 状态 |

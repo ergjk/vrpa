@@ -1,0 +1,46 @@
+name: 功能建议
+description: 提议新能力或改进（V1.0/V1.1/V1.2）
+title: "[feature] "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 要解决的问题
+      description: 当前痛点/限制是什么？
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案
+      description: 期望的行为、接口或配置
+    validations:
+      required: true
+  - type: dropdown
+    id: version
+    attributes:
+      label: 目标版本
+      options:
+        - V1.0（真机 dry-run / 验收）
+        - V1.1（表情/语音/撤回/插件）
+        - V1.2（学习型操作/行为克隆）
+        - 不确定
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: 安全影响
+      description: 是否涉及真实发送、R3（图像识别消息）、密钥、权限、平台规则？
+      render: text
+    validations:
+      required: true
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: 确认
+      options:
+        - label: 该建议不要求绕过 dry_run / 三重校验 / R3 红线
+          required: true
