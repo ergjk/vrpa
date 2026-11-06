@@ -145,6 +145,13 @@ def _cmd_locate(argv: Sequence[str]) -> int:
     return run_locate(argv)
 
 
+def _cmd_doctor(argv: Sequence[str]) -> int:
+    """M0-07：环境体检（依赖 / 屏幕 DPI / 微信窗口 / 写权限）。"""
+    from wechat_agent.tools.doctor import run_doctor
+
+    return run_doctor(argv)
+
+
 def _cmd_send(argv: Sequence[str]) -> int:
     """M6-01：控制台发送（默认 dry_run）。"""
     from wechat_agent.tools.send import run_send
@@ -288,6 +295,7 @@ register_handler("probe", _cmd_probe)
 register_handler("replay", _cmd_replay)
 register_handler("run", _cmd_run)
 register_handler("llm-ping", _cmd_llm_ping)
+register_handler("doctor", _cmd_doctor)
 register_handler("send", _cmd_send)
 register_handler("plugin", _cmd_plugin)
 register_handler("report", _cmd_report)

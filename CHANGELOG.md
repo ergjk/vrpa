@@ -135,8 +135,15 @@
   - `report` / `soak` / `acceptance` / `send` / `plugin` 命令；`doctor` 仍为 M0-07 待交付
   - 测试：505 passed / 88.29%；所有发送路径默认 dry_run，无真实键鼠
 
+### Added
+- M0-07 环境体检 `doctor`：
+  - Python 版本、第三方依赖（numpy/cv2/pyautogui/pywinauto/pyperclip）
+  - 屏幕分辨率 / DPI / 多屏信息、微信窗口探测、数据目录写权限探针、人设文件
+  - 分级输出：PASS / WARN（缺失不崩）/ FAIL（致命项退出码 2）；支持 `--json`
+  - 测试：515 passed / 88.28%
+
 ### Planned
-- M0 ~ M6 已完成；后续为真机验收与 GUI 托盘接入（doctor 环境体检仍待 M0-07）
+- M0 ~ M6 全部里程碑已完成；后续为真机验收与 GUI 托盘接入
 - M0-07：环境体检 `doctor`
 - M0-08：控制台骨架
 - M0-09：红线自检 `selftest --redlines`

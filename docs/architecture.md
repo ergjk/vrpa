@@ -121,6 +121,7 @@ wechat_agent/                  # 微信应用 + 微信适配器
 | M2-03（已完成） | 框选采集 capture | 框选比例来自配置、Ctrl+C、剪贴板恢复、空剪贴板 CopyFailed |
 | M2-04（已完成） | 解析器与样例库 | `vrpa.parsing.StrategyDispatcher` + 微信三策略 + 15 份 golden 样例 |
 | M2-05（已完成） | probe 采集诊断 | `probe --text/--chat --json`，只读不落库不回复 |
+| M0-07（已完成） | 环境体检 doctor | 依赖/屏幕 DPI/微信窗口/数据目录写权限；WARN 不崩、致命项非 0 退出 |
 | M2-06（已完成） | R3 边界红线静态测试 | 消息路径禁用 cv2/OCR/模板匹配；解析器只接受文本 |
 | M3-01（已完成） | 流水库读写 API | `vrpa.memory.history`：HistoryStore（会话/写入/尾部哈希/状态更新） |
 | M3-02（已完成） | 去重核心（尾部锚点对齐） | `vrpa.memory.dedup.align_tail`：最长尾部重叠、未锚定不猜测 |

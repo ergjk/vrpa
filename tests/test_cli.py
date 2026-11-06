@@ -39,10 +39,9 @@ def test_unknown_subcommand(capsys: pytest.CaptureFixture[str]) -> None:
     assert "未知子命令" in capsys.readouterr().err
 
 
-def test_unimplemented_subcommand_exit_code(capsys: pytest.CaptureFixture[str]) -> None:
-    assert main_module.main(["doctor"]) == 2
-    err = capsys.readouterr().err
-    assert "尚未实现" in err
+def test_all_commands_have_handlers() -> None:
+    for name, command in main_module.COMMANDS.items():
+        assert command.handler is not None, f"子命令 {name} 尚未实现"
 
 
 def test_register_handler_unknown_raises() -> None:

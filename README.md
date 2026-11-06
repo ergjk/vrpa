@@ -1,7 +1,7 @@
 # VRPA-WeChat-Agent
 
 > **VRPA（Vision RPA）通用 RPA 框架底座 + 微信参考实现** · MIT License
-> 状态：**M0 ~ M6 全部阶段已完成**（505 项测试全绿 · 覆盖率 88.29% · ruff / mypy strict 全绿 · 默认 dry_run）
+> 状态：**M0 ~ M6 全部阶段已完成**（515 项测试全绿 · 覆盖率 88.30% · ruff / mypy strict 全绿 · 默认 dry_run）
 > M4：队列/拟人延迟/限流/状态机熔断/`--simulate`/接管；M5：OpenAI 兼容客户端（重试+用量）、Prompt 预算裁剪、后处理安全过滤、人设热加载、`llm-ping`。
 
 ---
@@ -100,7 +100,7 @@ vrpa/                     # 通用框架底座（可独立发布/复用）
   ports.py                #   五端口协议 + 跨层 DTO（M0-F-04）
   platform.py             #   PlatformAdapter 协议 + AdapterRegistry（M0-F-04）
   testing/                #   Fakes + contracts 合规测试套件（M0-F-04）
-tests/                    # 505 项测试（配置/日志/异常/接口/双库/CLI/端口/契约/兼容 shim）
+tests/                    # 515 项测试（配置/日志/异常/接口/双库/CLI/端口/契约/兼容 shim）
 docs/                     # 技术方案、行动清单、架构、ADR、适配器指南
 scripts/quality.ps1|.bat  # 一键质量门禁（ruff + mypy strict + pytest + coverage）
 wechat_agent/             # 微信参考实现（六层模块见 §5.1）
@@ -234,7 +234,7 @@ python -m wechat_agent run                     # M6（正式运行，建议先�
 
 ```powershell
 .\scripts\quality.bat          # 一键：ruff check → ruff format → mypy strict → pytest+coverage
-python -m pytest tests -q     # 单元测试（当前 505 passed）
+python -m pytest tests -q     # 单元测试（当前 515 passed）
 python -m mypy                # vrpa 框架包 strict
 ```
 
@@ -243,8 +243,8 @@ python -m mypy                # vrpa 框架包 strict
 | 静态检查 | ruff（E/F/I/UP/B/SIM） | 全绿 |
 | 格式 | ruff format | 全绿 |
 | 类型 | mypy strict（`vrpa`） | 0 error |
-| 测试 | pytest | 505 passed |
-| 覆盖率 | pytest-cov | 88.29%（门禁 ≥85%） |
+| 测试 | pytest | 515 passed |
+| 覆盖率 | pytest-cov | 88.30%（门禁 ≥85%） |
 | 一键 | `scripts\quality.bat` | `QUALITY GATE: PASS` |
 
 ---
