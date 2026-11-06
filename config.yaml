@@ -1,9 +1,21 @@
 # ============================================================================
-# VRPA-WeChat-Agent V1.0 主配置（里程碑 M0-02）
-# 说明：所有相对路径相对本文件所在目录解析；不要提交 .env，只提交 .env.example。
-# 修改后自检：python -m wechat_agent selftest
+# VRPA-WeChat-Agent 主配置（schema v2，M0-F-03）
+# 结构：通用段 + platform: {kind, options}
+#   - kind: 平台适配器类型，由 vrpa PlatformRegistry 解析
+#   - options: 平台私有字段，由对应插件校验（微信插件见 wechat_agent/config/wechat_schema.py）
+# 兼容：schema v1（顶层 wechat 段）会自动升级为 v2 并打印迁移提示
+# 自检：python -m wechat_agent selftest
 # ============================================================================
-schema: 1
+schema: 2
+
+platform:
+  kind: wechat
+  options:
+    window_title_regex: "^(微信|WeChat)$"
+    process_names: ["WeChat.exe", "WeChatAppEx.exe"]
+    activate_before_action: true
+    chat_type_default: private     # private | group
+    switch_chat: search_box        # search_box（推荐） | session_list
 
 app:
   log_level: INFO                # DEBUG | INFO | WARNING | ERROR
@@ -11,13 +23,6 @@ app:
   dry_run: true                  # true = 只采集与推理，不真实发送（首次运行必须为 true）
   tick_interval: 2.0             # 主循环轮询间隔（秒）
   max_hours: 8                   # 连续运行上限，超时自动暂停
-
-wechat:
-  window_title_regex: "^(微信|WeChat)$"
-  process_names: ["WeChat.exe", "WeChatAppEx.exe"]
-  activate_before_action: true
-  chat_type_default: private     # private | group
-  switch_chat: search_box        # search_box（推荐） | session_list
 
 # —— 假 UIA 树（自定义视觉映射层，M1 核心）——
 uia_tree:

@@ -26,7 +26,8 @@ def test_default_when_no_env() -> None:
 
 def test_app_legacy_env_still_supported(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("WECHAT_AGENT_CONFIG", "legacy.yaml")
-    assert default_config_path() == Path("legacy.yaml")
+    with pytest.warns(DeprecationWarning, match="WECHAT_AGENT_CONFIG"):
+        assert default_config_path() == Path("legacy.yaml")
 
 
 def test_new_env_wins(monkeypatch: pytest.MonkeyPatch) -> None:

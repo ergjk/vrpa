@@ -42,7 +42,10 @@ def _mutate(old: str, new: str) -> str:
 
 def test_load_root_config() -> None:
     cfg = load_config(ROOT / "config.yaml")
-    assert cfg.schema == 1
+    assert cfg.schema == 2
+    assert cfg.platform_kind == "wechat"
+    assert "wechat" in cfg.platform_plugin
+    assert cfg.migrations == ()
     assert cfg.app.dry_run is True
     assert cfg.data_dir == (ROOT / "data").resolve()
     assert cfg.uia_tree.allow_ratio_fallback is False

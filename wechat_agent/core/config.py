@@ -19,15 +19,56 @@ import json
 import os
 import re
 import sys
+import warnings
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
+from vrpa.config.env import get_env
+from vrpa.config.loader import SCHEMA_VERSION, load_document, merge_defaults
+from vrpa.config.plugin import PlatformRegistry
+from vrpa.config.validators import (
+    as_bool as _as_bool,
+)
+from vrpa.config.validators import (
+    as_float as _as_float,
+)
+from vrpa.config.validators import (
+    as_int as _as_int,
+)
+from vrpa.config.validators import (
+    as_number_list as _as_number_list,
+)
+from vrpa.config.validators import (
+    as_range as _as_range,
+)
+from vrpa.config.validators import (
+    as_ratio as _as_ratio,
+)
+from vrpa.config.validators import (
+    as_str as _as_str,
+)
+from vrpa.config.validators import (
+    as_str_list as _as_str_list,
+)
+from vrpa.config.validators import (
+    check_keys as _check_keys,
+)
+from vrpa.config.validators import (
+    expect_mapping as _expect_mapping,
+)
+from vrpa.config.validators import (
+    mask_secret as _mask_secret,
+)
+from vrpa.config.validators import (
+    section as _section,
+)
 from vrpa.errors import ConfigError
+from wechat_agent.config.wechat_schema import WechatPlatformOptions, WechatPlatformPlugin
 
 DEFAULT_CONFIG_NAME = "config.yaml"
-SUPPORTED_SCHEMA = 1
+SUPPORTED_SCHEMA = SCHEMA_VERSION
 ENV_CONFIG_OVERRIDE = "VRPA_CONFIG"
 ENV_CONFIG_OVERRIDE_LEGACY = ("WECHAT_AGENT_CONFIG",)
 ENV_API_KEY = "DEEPSEEK_API_KEY"
@@ -35,7 +76,7 @@ ENV_API_KEY = "DEEPSEEK_API_KEY"
 _TOP_KEYS = (
     "schema",
     "app",
-    "wechat",
+    "platform",
     "uia_tree",
     "capture",
     "llm",
@@ -46,8 +87,6 @@ _TOP_KEYS = (
     "plugins",
 )
 _LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR"}
-_CHAT_TYPES = {"private", "group"}
-_SWITCH_MODES = {"search_box", "session_list"}
 _POLICIES = {"ignore", "queue_confirm"}
 _TITLE_VERIFY_MODES = {"capture_first_sender", "search_text"}
 _FAIL_POLICIES = {"hold", "skip"}
@@ -56,113 +95,9 @@ _PROFILE_RE = re.compile(r"^\d{3,5}x\d{3,5}@\d+(?:\.\d+)?$")
 _QUIET_RE = re.compile(r"^([01]?\d|2[0-3]):[0-5]\d-([01]?\d|2[0-3]):[0-5]\d$")
 _ENV_KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
-
-# ============================================================================
-# 基础校验工具
-# ============================================================================
-def _expect_mapping(value: Any, where: str) -> Mapping[str, Any]:
-    if not isinstance(value, dict):
-        raise ConfigError(f"{where} 必须是映射（dict），实际为 {type(value).__name__}")
-    return value
-
-
-def _section(root: Mapping[str, Any], name: str) -> Mapping[str, Any]:
-    if name not in root:
-        raise ConfigError(f"配置缺少段落：{name}")
-    return _expect_mapping(root[name], name)
-
-
-def _check_keys(raw: Mapping[str, Any], allowed: Sequence[str], where: str) -> None:
-    unknown = sorted(set(raw) - set(allowed))
-    if unknown:
-        raise ConfigError(f"{where} 存在未知键：{unknown}（允许：{sorted(allowed)}）")
-
-
-def _as_bool(value: Any, where: str) -> bool:
-    if isinstance(value, bool):
-        return value
-    raise ConfigError(f"{where} 必须是布尔值 true/false，实际为 {value!r}")
-
-
-def _as_int(value: Any, where: str, *, minimum: int | None = None, maximum: int | None = None) -> int:
-    if isinstance(value, bool) or not isinstance(value, int):
-        raise ConfigError(f"{where} 必须是整数，实际为 {value!r}")
-    if minimum is not None and value < minimum:
-        raise ConfigError(f"{where} 必须 >= {minimum}，实际为 {value}")
-    if maximum is not None and value > maximum:
-        raise ConfigError(f"{where} 必须 <= {maximum}，实际为 {value}")
-    return value
-
-
-def _as_float(
-    value: Any,
-    where: str,
-    *,
-    minimum: float | None = None,
-    maximum: float | None = None,
-    minimum_exclusive: bool = False,
-    maximum_exclusive: bool = False,
-) -> float:
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise ConfigError(f"{where} 必须是数字，实际为 {value!r}")
-    result = float(value)
-    if minimum is not None:
-        if minimum_exclusive and not result > minimum:
-            raise ConfigError(f"{where} 必须 > {minimum}，实际为 {result}")
-        if not minimum_exclusive and result < minimum:
-            raise ConfigError(f"{where} 必须 >= {minimum}，实际为 {result}")
-    if maximum is not None:
-        if maximum_exclusive and not result < maximum:
-            raise ConfigError(f"{where} 必须 < {maximum}，实际为 {result}")
-        if not maximum_exclusive and result > maximum:
-            raise ConfigError(f"{where} 必须 <= {maximum}，实际为 {result}")
-    return result
-
-
-def _as_str(value: Any, where: str, *, choices: set[str] | None = None) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ConfigError(f"{where} 必须是非空字符串，实际为 {value!r}")
-    result = value.strip()
-    if choices is not None and result not in choices:
-        raise ConfigError(f"{where} 必须是 {sorted(choices)} 之一，实际为 {result!r}")
-    return result
-
-
-def _as_str_list(value: Any, where: str, *, non_empty: bool = False) -> tuple[str, ...]:
-    if not isinstance(value, (list, tuple)):
-        raise ConfigError(f"{where} 必须是字符串列表，实际为 {type(value).__name__}")
-    items = tuple(_as_str(item, f"{where}[{index}]") for index, item in enumerate(value))
-    if non_empty and not items:
-        raise ConfigError(f"{where} 不能为空列表")
-    return items
-
-
-def _as_number_list(value: Any, where: str) -> tuple[Any, ...]:
-    if not isinstance(value, (list, tuple)) or not value:
-        raise ConfigError(f"{where} 必须是非空数字列表，实际为 {value!r}")
-    return tuple(value)
-
-
-def _as_range(value: Any, where: str) -> tuple[float, float]:
-    if not isinstance(value, (list, tuple)) or len(value) != 2:
-        raise ConfigError(f"{where} 必须是 [最小, 最大] 两元素区间，实际为 {value!r}")
-    low = _as_float(value[0], f"{where}[0]", minimum=0.0)
-    high = _as_float(value[1], f"{where}[1]", minimum=0.0)
-    if low > high:
-        raise ConfigError(f"{where} 区间下限不能大于上限：{low} > {high}")
-    return (low, high)
-
-
-def _as_ratio(value: Any, where: str) -> float:
-    return _as_float(value, where, minimum=0.0, maximum=1.0)
-
-
-def _mask_secret(value: str | None) -> str:
-    if not value:
-        return "<未设置>"
-    if len(value) <= 8:
-        return "***"
-    return f"{value[:3]}***{value[-4:]}"
+# 平台插件注册表：应用层注册微信插件；框架内核保持平台无关
+PLATFORM_REGISTRY = PlatformRegistry()
+PLATFORM_REGISTRY.register(WechatPlatformPlugin())
 
 
 # ============================================================================
@@ -177,13 +112,8 @@ class AppConfig:
     max_hours: float
 
 
-@dataclass(frozen=True)
-class WechatConfig:
-    window_title_regex: str
-    process_names: tuple[str, ...]
-    activate_before_action: bool
-    chat_type_default: str
-    switch_chat: str
+# 平台配置对象由 wechat_agent/config/wechat_schema.py 提供；保留旧名便于应用层引用
+WechatConfig = WechatPlatformOptions
 
 
 @dataclass(frozen=True)
@@ -303,6 +233,8 @@ class DisplayInfo:
 class Config:
     schema: int
     path: Path
+    platform_kind: str
+    platform_plugin: str
     app: AppConfig
     wechat: WechatConfig
     uia_tree: UiaTreeConfig
@@ -315,6 +247,7 @@ class Config:
     plugins: PluginsConfig
     display: DisplayInfo
     env_loaded: tuple[str, ...] = field(default_factory=tuple)
+    migrations: tuple[str, ...] = ()
 
     # ---------- 派生路径 ----------
     @property
@@ -467,24 +400,16 @@ def _parse_app(raw: Mapping[str, Any], base: Path) -> AppConfig:
     )
 
 
-def _parse_wechat(raw: Mapping[str, Any]) -> WechatConfig:
-    _check_keys(
-        raw,
-        ("window_title_regex", "process_names", "activate_before_action", "chat_type_default", "switch_chat"),
-        "wechat",
-    )
-    pattern = _as_str(raw.get("window_title_regex"), "wechat.window_title_regex")
-    try:
-        re.compile(pattern)
-    except re.error as exc:
-        raise ConfigError(f"wechat.window_title_regex 不是合法正则：{exc}") from exc
-    return WechatConfig(
-        window_title_regex=pattern,
-        process_names=_as_str_list(raw.get("process_names"), "wechat.process_names", non_empty=True),
-        activate_before_action=_as_bool(raw.get("activate_before_action"), "wechat.activate_before_action"),
-        chat_type_default=_as_str(raw.get("chat_type_default"), "wechat.chat_type_default", choices=_CHAT_TYPES),
-        switch_chat=_as_str(raw.get("switch_chat"), "wechat.switch_chat", choices=_SWITCH_MODES),
-    )
+def _parse_platform(raw: Mapping[str, Any]) -> tuple[str, str, WechatConfig]:
+    """platform 段结构校验 + 平台插件校验 options（默认值由内核深度合并）。"""
+    platform_raw = _section(raw, "platform")
+    _check_keys(platform_raw, ("kind", "options"), "platform")
+    kind = _as_str(platform_raw.get("kind"), "platform.kind")
+    plugin = PLATFORM_REGISTRY.get(kind)
+    options_raw = _expect_mapping(platform_raw.get("options"), "platform.options")
+    merged = merge_defaults(plugin.default_options(), options_raw)
+    parsed = plugin.validate_options(merged)
+    return kind, plugin.describe(), parsed
 
 
 def _parse_uia_tree(raw: Mapping[str, Any], base: Path) -> UiaTreeConfig:
@@ -720,15 +645,12 @@ def detect_display() -> DisplayInfo:
 # 对外入口
 # ============================================================================
 def default_config_path() -> Path:
-    for env_name in (ENV_CONFIG_OVERRIDE, *ENV_CONFIG_OVERRIDE_LEGACY):
-        value = os.environ.get(env_name, "").strip()
-        if value:
-            return Path(value)
-    return Path(DEFAULT_CONFIG_NAME)
+    value = get_env(ENV_CONFIG_OVERRIDE, ENV_CONFIG_OVERRIDE_LEGACY)
+    return Path(value) if value else Path(DEFAULT_CONFIG_NAME)
 
 
 def load_config(path: str | os.PathLike[str] | None = None) -> Config:
-    """加载配置：解析 YAML -> 加载 .env -> 逐段校验 -> 返回不可变 Config。"""
+    """加载配置：框架内核解析+升级 YAML -> 应用层逐段校验 -> 返回不可变 Config。"""
     config_path = Path(path) if path is not None else default_config_path()
     if not config_path.is_file():
         raise ConfigError(
@@ -736,19 +658,37 @@ def load_config(path: str | os.PathLike[str] | None = None) -> Config:
         )
     config_path = config_path.resolve()
     base = config_path.parent
-    raw = _load_yaml(config_path)
+
+    raw, migration = load_document(
+        config_path,
+        legacy_sections=PLATFORM_REGISTRY.legacy_section_map(),
+    )
+    migrations: tuple[str, ...] = ()
+    if migration is not None:
+        message = migration.message()
+        migrations = (message,)
+        warnings.warn(message, UserWarning, stacklevel=2)
+
+    if "wechat" in raw:
+        raise ConfigError(
+            "schema v2 不再支持顶层 wechat 段：请改用 platform: {kind: wechat, options: {...}}；"
+            "或将文件声明为 schema: 1 交由迁移器自动升级"
+        )
     _check_keys(raw, _TOP_KEYS, "根")
     schema = _as_int(raw.get("schema"), "schema", minimum=1)
     if schema != SUPPORTED_SCHEMA:
         raise ConfigError(f"不支持的配置 schema={schema}（本版本为 {SUPPORTED_SCHEMA}）")
 
     env_loaded = tuple(load_dotenv(base / ".env").keys())
+    platform_kind, platform_plugin, wechat_cfg = _parse_platform(raw)
 
     return Config(
         schema=schema,
         path=config_path,
+        platform_kind=platform_kind,
+        platform_plugin=platform_plugin,
         app=_parse_app(_section(raw, "app"), base),
-        wechat=_parse_wechat(_section(raw, "wechat")),
+        wechat=wechat_cfg,
         uia_tree=_parse_uia_tree(_section(raw, "uia_tree"), base),
         capture=_parse_capture(_section(raw, "capture")),
         llm=_parse_llm(_section(raw, "llm")),
@@ -759,6 +699,7 @@ def load_config(path: str | os.PathLike[str] | None = None) -> Config:
         plugins=_parse_plugins(_section(raw, "plugins")),
         display=detect_display(),
         env_loaded=env_loaded,
+        migrations=migrations,
     )
 
 
@@ -870,11 +811,16 @@ def build_selftest_report(cfg: Config) -> dict[str, Any]:
 
     add("config", True, f"schema={cfg.schema} path={cfg.path}")
 
+    add("platform", True, f"kind={cfg.platform_kind} plugin={cfg.platform_plugin}")
+
     try:
         re.compile(cfg.wechat.window_title_regex)
-        add("wechat.window_title_regex", True, "ok")
+        add("platform.window_title_regex", True, "ok")
     except re.error as exc:
-        add("wechat.window_title_regex", False, str(exc))
+        add("platform.window_title_regex", False, str(exc))
+
+    if cfg.migrations:
+        add("config.migration", True, "；".join(cfg.migrations))
 
     add(
         "display",
@@ -920,6 +866,8 @@ def build_selftest_report(cfg: Config) -> dict[str, Any]:
     return {
         "ok": ok,
         "config": {"path": str(cfg.path), "schema": cfg.schema},
+        "platform": {"kind": cfg.platform_kind, "plugin": cfg.platform_plugin},
+        "migrations": list(cfg.migrations),
         "display": {
             "width": cfg.display.width,
             "height": cfg.display.height,
@@ -955,8 +903,10 @@ def render_selftest(report: Mapping[str, Any]) -> str:
     llm = report["llm"]
     runtime = report["runtime"]
     lines = [
-        "== VRPA-WeChat-Agent selftest (M0-02) ==",
+        "== VRPA-WeChat-Agent selftest (M0 框架底座) ==",
         f"CONFIG OK  path={config['path']}  schema={config['schema']}",
+        f"platform   : kind={report.get('platform', {}).get('kind', '-')}"
+        f"  plugin={report.get('platform', {}).get('plugin', '-')}",
         f"display    : {display['width']}x{display['height']} @{display['dpi_scale']}"
         f"  profile={display['profile']}  detected={display['detected']}",
         f"data_dir   : {report['data_dir']}",

@@ -22,8 +22,14 @@
 - 启用 mypy strict（`vrpa` 3 个文件 0 error）；覆盖率门禁提升到 87%+
 - 修复 `pyproject.toml` 无效配置 `cache_dir`（pytest 9 告警）
 
+### Added
+- M0-F-03 配置 schema v2 与平台插件：
+  - `vrpa/config/`：env 解析、通用校验原语、平台插件协议与注册表、YAML 加载与 v1->v2 自动升级、默认值深度合并
+  - `wechat_agent/config/wechat_schema.py`：微信平台插件（`platform.options` 校验 + 插件版本）
+  - `config.yaml` 升级 schema 2（`platform.kind: wechat` + `platform.options`）
+  - 环境变量统一 `VRPA_*`；旧名回退并打 DeprecationWarning；`selftest` 输出平台信息与迁移记录
+
 ### Planned
-- M0-F-03：配置 schema v2（`platform:` 命名空间 + 平台插件式校验 + `VRPA_*`）
 - M0-F-03：配置 schema v2（`platform:` 命名空间 + 平台插件式校验）
 - M0-F-04：`PlatformAdapter` 协议 + 适配器注册表 + 合规测试套件 `vrpa.testing.contracts`
 - M0-F-05：微信适配器注册、应用层去框架化

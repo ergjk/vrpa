@@ -1,7 +1,7 @@
 # VRPA-WeChat-Agent
 
 > **VRPA（Vision RPA）通用 RPA 框架底座 + 微信参考实现** · MIT License
-> 状态：**M0 框架底座已完成**（125 项测试全绿 · 覆盖率 88.16% · ruff / mypy strict 全绿）
+> 状态：**M0 框架底座已完成**（155 项测试全绿 · 覆盖率 88.45% · ruff / mypy strict 全绿）
 
 ---
 
@@ -57,7 +57,7 @@
 | 双库存储引擎 | 流水库（历史上下文）+ 核心档案库（长期记忆）双库分离；WAL、幂等迁移、预迁移备份、FTS5 全文检索、软删 | 已实现 M0-06（当前实现在 `wechat_agent/memory`；框架化迁移见 ADR-0001） |
 | 异常与退出码契约 | 统一异常家族 + 进程退出码（0/1/2/3/4/5/6/7/8/130），`to_dict`/`to_audit` 结构化、自动脱敏 | 已实现 M0-04 |
 | 日志 / 审计 / 脱敏 | RotatingFileHandler、trace_id 贯穿、JSONL 审计、API Key / 手机号 / 身份证 / 邮箱打码 | 已实现 M0-03 |
-| 配置内核 | 通用配置加载、校验、环境变量覆盖（`VRPA_*`），平台字段由适配器插件校验 | 规划中 M0-F-03 |
+| 配置内核 | 通用配置加载、校验、环境变量覆盖（`VRPA_*`），平台字段由适配器插件校验 | 已完成 M0-F-03 |
 | 拟人化调度队列 | 优先级 FIFO、跨会话轮转、限流 / 静默时段、可打断的拟人延迟（思考 / 打字 / 发送节奏） | 规划中 M4 |
 | 视觉锚点匹配 | 元素树 profile + 多尺度模板匹配定位（失败即中止，禁止坐标兜底），供各平台适配器复用 | 规划中 M1（微信参考实现先行，随后按端口契约抽入 `vrpa`） |
 | 平台适配器契约 | `PlatformAdapter` 协议 + 注册表 + **适配器合规测试套件**（第三方实现必须全绿才能接入） | 规划中 M0-F-04 |
@@ -83,7 +83,7 @@ vrpa/                     # 通用框架底座（可独立发布/复用）
   __init__.py             #   框架版本 + 契约版本 INTERFACE_VERSION
   logging.py              #   日志 / 审计 / trace_id / 脱敏（命名空间可配置）
   errors.py               #   平台无关异常族 + 退出码契约
-tests/                    # 125 项测试（配置/日志/异常/接口/双库/CLI/兼容 shim）
+tests/                    # 155 项测试（配置/日志/异常/接口/双库/CLI/兼容 shim）
 docs/                     # 技术方案、行动清单、架构、ADR、适配器指南
 scripts/quality.ps1|.bat  # 一键质量门禁（ruff + mypy strict + pytest + coverage）
 wechat_agent/             # 微信参考实现（六层模块见 §5.1）
@@ -148,7 +148,9 @@ pip install -r requirements.txt
 
 # 2) 配置
 copy .env.example .env        # 填入 DEEPSEEK_API_KEY
-# 编辑 config.yaml：目标会话、限流、拟人延迟、dry_run 保持 true
+# 编辑 config.yaml（schema v2：platform.kind / platform.options；
+# 若沿用 v1 的顶层 wechat 段，加载时会自动升级并打印迁移提示）
+# 目标会话、限流、拟人延迟、dry_run 保持 true
 
 # 3) 环境自检 + 双库初始化（已可用）
 python -m wechat_agent selftest
@@ -191,7 +193,7 @@ python -m wechat_agent run                     # M6（正式运行，建议先�
 
 ```powershell
 .\scripts\quality.bat          # 一键：ruff check → ruff format → mypy strict → pytest+coverage
-python -m pytest tests -q     # 单元测试（当前 125 passed）
+python -m pytest tests -q     # 单元测试（当前 155 passed）
 python -m mypy                # vrpa 框架包 strict
 ```
 
@@ -200,8 +202,8 @@ python -m mypy                # vrpa 框架包 strict
 | 静态检查 | ruff（E/F/I/UP/B/SIM） | 全绿 |
 | 格式 | ruff format | 全绿 |
 | 类型 | mypy strict（`vrpa`） | 0 error |
-| 测试 | pytest | 125 passed |
-| 覆盖率 | pytest-cov | 88.16%（门禁 ≥85%） |
+| 测试 | pytest | 155 passed |
+| 覆盖率 | pytest-cov | 88.45%（门禁 ≥85%） |
 | 一键 | `scripts\quality.bat` | `QUALITY GATE: PASS` |
 
 ---

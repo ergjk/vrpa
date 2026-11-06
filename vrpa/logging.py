@@ -31,6 +31,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from vrpa.config.env import warn_legacy_env
+
 __all__ = [
     "AUDIT_FILE_NAME",
     "LOG_BACKUP_COUNT",
@@ -394,9 +396,12 @@ def setup_audit(log_dir: str | os.PathLike[str]) -> AuditLogger:
 
 
 def _default_data_dir() -> Path:
+    primary = _runtime.data_dir_envs[0] if _runtime.data_dir_envs else "VRPA_DATA_DIR"
     for env_name in _runtime.data_dir_envs:
         value = os.environ.get(env_name, "").strip()
         if value:
+            if env_name != primary:
+                warn_legacy_env(env_name, primary)
             return Path(value) / "logs"
     return Path("data") / "logs"
 
