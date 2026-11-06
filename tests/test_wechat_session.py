@@ -123,3 +123,17 @@ def test_capture_verification_with_identity_nickname() -> None:
     )
     with pytest.raises(SessionSwitchFailed, match="已知昵称"):
         mismatch.ensure_chat("测试会话")
+
+
+def test_switch_operations_use_configured_delay() -> None:
+    sleeps: list[float] = []
+    switcher = WeChatSessionSwitcher(
+        CFG,
+        _tree(),
+        FakeDriver(scripted=("",)),
+        sleep=sleeps.append,
+        capture=lambda _chat: "测试会话 的消息",
+    )
+    switcher.ensure_chat("测试会话")
+    assert len(sleeps) >= 5
+    assert all(abs(value - float(CFG.capture.switch_delay)) < 1e-9 for value in sleeps)

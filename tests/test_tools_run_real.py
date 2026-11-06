@@ -84,3 +84,19 @@ def test_run_real_requires_chat_and_dry_run(tmp_path: Path, capsys: pytest.Captu
 def test_echo_brain_is_offline() -> None:
     result = EchoBrain().generate([{"role": "user", "content": "hi"}])
     assert result.text.startswith("[dry-run echo]") and result.model == "echo"
+
+
+def test_execute_dry_run_includes_timing(tmp_path: Path) -> None:
+    config = _config(tmp_path)
+    payload = execute_dry_run(
+        config,
+        perception=ScriptedPerception({"张三": [CAPTURE]}),
+        chat="张三",
+        ticks=1,
+        brain=ScriptedBrain({"张三": ["你好呀"]}),
+        settle=0.0,
+        sleep=lambda _seconds: None,
+    )
+    timing = payload["timing"]
+    for key in ("activate_ms", "switch_session_ms", "capture_ms", "ingest_ms", "reply_ms", "ticks_total_ms"):
+        assert key in timing and timing[key] >= 0

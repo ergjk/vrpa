@@ -13,7 +13,7 @@ import time
 from collections import deque
 from collections.abc import Callable, Sequence
 from contextlib import suppress
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 from vrpa.errors import (
@@ -125,6 +125,7 @@ class TickResult:
     failures: int = 0
     breaker: str = "closed"
     events: tuple[str, ...] = ()
+    phase_ms: dict[str, float] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -251,10 +252,15 @@ class Orchestrator:
 
         captured = ingested = duplicates = 0
         failures = 0
+        phase: dict[str, float] = {}
         try:
+            started = time.perf_counter()
             raw = self._perception.capture(chat)  # type: ignore[attr-defined]
+            phase["capture_ms"] = round((time.perf_counter() - started) * 1000, 1)
+            started = time.perf_counter()
             incoming = self._parser.parse(raw) if hasattr(self._parser, "parse") else ()
             ingest = self._pipeline.ingest(chat, incoming)
+            phase["ingest_ms"] = round((time.perf_counter() - started) * 1000, 1)
             captured = len(incoming)
             ingested = len(ingest.inserted)
             duplicates = ingest.duplicates
@@ -278,7 +284,9 @@ class Orchestrator:
 
         replies: list[str] = []
         if self._machine.state is RunState.RUNNING:
+            started = time.perf_counter()
             replies = self._drain_replies(events, failures)
+            phase["reply_ms"] = round((time.perf_counter() - started) * 1000, 1)
             failures += sum(1 for event in events if event.startswith("send_failed:"))
         return self._result(
             events,
@@ -287,6 +295,7 @@ class Orchestrator:
             duplicates=duplicates,
             replies=tuple(replies),
             failures=failures,
+            phase_ms=phase,
         )
 
     # ------------------------------------------------------------ 内部
@@ -299,6 +308,7 @@ class Orchestrator:
         duplicates: int = 0,
         replies: tuple[str, ...] = (),
         failures: int = 0,
+        phase_ms: dict[str, float] | None = None,
     ) -> TickResult:
         return TickResult(
             tick=self._tick,
@@ -311,6 +321,7 @@ class Orchestrator:
             failures=failures,
             breaker=self._breaker.state.value,
             events=tuple(events),
+            phase_ms=phase_ms or {},
         )
 
     def _apply_control(self, events: list[str]) -> None:

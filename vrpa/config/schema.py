@@ -127,6 +127,7 @@ class CaptureConfig:
     low_confidence_policy: str
     title_verify: str
     restore_clipboard: bool
+    switch_delay: float = 0.5
 
 
 @dataclass(frozen=True)
@@ -291,6 +292,7 @@ def parse_capture(raw: Mapping[str, Any]) -> CaptureConfig:
             "low_confidence_policy",
             "title_verify",
             "restore_clipboard",
+            "switch_delay",
         ),
         "capture",
     )
@@ -305,6 +307,7 @@ def parse_capture(raw: Mapping[str, Any]) -> CaptureConfig:
     _check_keys(from_raw, ("x", "y"), "capture.drag.from")
     _check_keys(to_raw, ("x", "y"), "capture.drag.to")
     return CaptureConfig(
+        switch_delay=_as_float(raw.get("switch_delay", 0.5), "capture.switch_delay", minimum=0.0, maximum=5.0),
         drag=DragConfig(
             from_x=_as_ratio(from_raw.get("x"), "capture.drag.from.x"),
             from_y=_as_ratio(from_raw.get("y"), "capture.drag.from.y"),

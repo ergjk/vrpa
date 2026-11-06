@@ -57,34 +57,41 @@ def align_tail(known: Sequence[str], observed: Sequence[str]) -> Alignment:
             reason="no_known",
         )
 
-    max_overlap = min(len(known_tuple), len(observed_tuple))
-    # 1) 观察完全包含在已知尾部（整屏都是重复）
-    if max_overlap == len(observed_tuple) and known_tuple[-len(observed_tuple) :] == observed_tuple:
-        return Alignment(
-            known_count=len(known_tuple),
-            observed_count=len(observed_tuple),
-            overlap=len(observed_tuple),
-            added_start=len(observed_tuple),
-            added_count=0,
-            duplicates=len(observed_tuple),
-            anchored=True,
-            confidence=1.0,
-            reason="full_duplicate",
-        )
-    # 2) 尾部锚点：最长 k 使 known[-k:] == observed[:k]
-    for overlap in range(max_overlap, 0, -1):
-        if known_tuple[-overlap:] == observed_tuple[:overlap]:
+    # 允许跳过库尾部少量“不在本次采集窗口内”的消息（例如 dry-run 未真实发送的 out、
+    # 或界面窗口裁剪），但必须找到重叠锚点；最多跳过 20 条。
+    max_skip = min(20, max(0, len(known_tuple) - 1))
+    for skip in range(0, max_skip + 1):
+        prefix = known_tuple[: len(known_tuple) - skip] if skip else known_tuple
+        if not prefix:
+            continue
+        max_overlap = min(len(prefix), len(observed_tuple))
+        # 1) 观察完全包含在已知尾部（整屏都是重复）
+        if max_overlap == len(observed_tuple) and prefix[-len(observed_tuple) :] == observed_tuple:
             return Alignment(
                 known_count=len(known_tuple),
                 observed_count=len(observed_tuple),
-                overlap=overlap,
-                added_start=overlap,
-                added_count=len(observed_tuple) - overlap,
-                duplicates=overlap,
+                overlap=len(observed_tuple),
+                added_start=len(observed_tuple),
+                added_count=0,
+                duplicates=len(observed_tuple),
                 anchored=True,
-                confidence=0.98 if overlap >= 2 else 0.8,
-                reason="tail_anchor",
+                confidence=1.0 if skip == 0 else 0.9,
+                reason="full_duplicate" if skip == 0 else "tail_anchor_skipped",
             )
+        # 2) 尾部锚点：最长 k 使 prefix[-k:] == observed[:k]
+        for overlap in range(max_overlap, 0, -1):
+            if prefix[-overlap:] == observed_tuple[:overlap]:
+                return Alignment(
+                    known_count=len(known_tuple),
+                    observed_count=len(observed_tuple),
+                    overlap=overlap,
+                    added_start=overlap,
+                    added_count=len(observed_tuple) - overlap,
+                    duplicates=overlap,
+                    anchored=True,
+                    confidence=(0.98 if overlap >= 2 else 0.8) if skip == 0 else 0.85,
+                    reason="tail_anchor" if skip == 0 else "tail_anchor_skipped",
+                )
     # 3) 无法锚定：不得猜测条数
     return Alignment(
         known_count=len(known_tuple),

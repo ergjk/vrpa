@@ -60,13 +60,18 @@ class WeChatSessionSwitcher:
             previous = self._driver.clipboard_get()
         except CopyFailed:
             previous = ""
+        delay = float(self._config.capture.switch_delay)
         try:
             self._driver.click(*rect.center)
+            self._sleep(delay)
             self._driver.hotkey("ctrl", "a")
+            self._sleep(delay)
             self._driver.clipboard_set(chat)
+            self._sleep(delay)
             self._driver.hotkey("ctrl", "v")
+            self._sleep(delay)
             self._driver.hotkey("enter")
-            self._sleep(0.15)
+            self._sleep(delay)
         finally:
             if previous:
                 self._driver.clipboard_set(previous)

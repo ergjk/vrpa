@@ -124,11 +124,23 @@ def execute_dry_run(
             ),
             control=ControlChannel(),
         )
+        timing: dict[str, float] = {}
+        started = time.perf_counter()
         perception.activate()
+        timing["activate_ms"] = round((time.perf_counter() - started) * 1000, 1)
+        started = time.perf_counter()
         perception.switch_session(chat)
+        timing["switch_session_ms"] = round((time.perf_counter() - started) * 1000, 1)
         if settle > 0:
+            started = time.perf_counter()
             sleep(float(settle))
+            timing["settle_ms"] = round((time.perf_counter() - started) * 1000, 1)
+        started = time.perf_counter()
         report = orchestrator.run([chat], max_ticks=max(1, int(ticks)))
+        timing["ticks_total_ms"] = round((time.perf_counter() - started) * 1000, 1)
+        timing["capture_ms"] = round(sum(tick.phase_ms.get("capture_ms", 0.0) for tick in report.tick_results), 1)
+        timing["ingest_ms"] = round(sum(tick.phase_ms.get("ingest_ms", 0.0) for tick in report.tick_results), 1)
+        timing["reply_ms"] = round(sum(tick.phase_ms.get("reply_ms", 0.0) for tick in report.tick_results), 1)
         return {
             "ok": report.failures == 0,
             "mode": mode,
@@ -143,6 +155,7 @@ def execute_dry_run(
             "writes": history.count(chat) if history.get_chat(chat) else 0,
             "failures": report.failures,
             "events": list(report.events),
+            "timing": timing,
             "dry_run": True,
         }
     finally:
@@ -161,6 +174,8 @@ def run_real(args: Any) -> int:
     if not config.app.dry_run:
         print("真实 dry-run 要求 dry_run=true；真实发送尚未开放", file=sys.stderr)
         return 2
+    started_at = time.perf_counter()
+    warmup_started = time.perf_counter()
     warmup = max(0.0, float(getattr(args, "warmup", 5.0) or 0.0))
     if warmup > 0:
         print(f"准备倒计时：{warmup:.0f} 秒后开始真实 dry-run（请切到微信主窗口）", file=sys.stderr)
@@ -170,6 +185,7 @@ def run_real(args: Any) -> int:
             remaining -= 1.0
             if remaining > 0:
                 print(f"  剩余 {remaining:.0f} 秒…", file=sys.stderr, flush=True)
+    warmup_ms = round((time.perf_counter() - warmup_started) * 1000, 1)
     try:
         perception = WeChatPerception(config)
         payload = execute_dry_run(
@@ -180,6 +196,8 @@ def run_real(args: Any) -> int:
             force_llm=bool(getattr(args, "llm", False)),
             settle=float(getattr(args, "settle", 1.5)),
         )
+        payload["timing"]["warmup_ms"] = warmup_ms
+        payload["timing"]["total_ms"] = round((time.perf_counter() - started_at) * 1000, 1)
     except AgentFrameworkError as exc:
         print(f"DRY-RUN ERROR: {exc}", file=sys.stderr)
         return int(exc.exit_code)

@@ -57,3 +57,18 @@ def test_known_fully_in_observed_prefix() -> None:
     result = align_tail(["a", "b"], ["a", "b", "c"])
     assert result.reason == "tail_anchor"
     assert result.overlap == 2 and result.added_count == 1
+
+
+def test_trailing_out_reply_not_in_window() -> None:
+    # 库里最后一条是 dry-run 未真实发送的 out；采集窗口里只有 3 条 in
+    result = align_tail(["a", "b", "c", "out"], ["a", "b", "c"])
+    assert result.anchored is True
+    assert result.duplicates == 3 and result.added_count == 0
+    assert result.reason == "tail_anchor_skipped"
+
+
+def test_trailing_out_reply_with_new_messages() -> None:
+    result = align_tail(["a", "b", "c", "out"], ["b", "c", "d"])
+    assert result.anchored is True
+    assert result.overlap == 2 and result.added_count == 1
+    assert result.reason == "tail_anchor_skipped"
