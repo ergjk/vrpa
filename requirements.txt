@@ -1,0 +1,30 @@
+# DSH-WeChat-Agent V1.0 —— 完整生产依赖
+# 目标 Python：3.11 / 3.12 / 3.13（首选 3.12）
+# Python 3.14：部分 RPA/视觉依赖可能尚无 cp314 预编译 wheel，见 requirements-core.txt 的降级说明
+#
+# 安装：pip install -r requirements.txt
+# 若报 "No matching distribution found for pywin32 / opencv-python / pynput"，
+# 不要强装、不要手动编译，改用 Python 3.12 重建 venv（详见 README 的降级指引）。
+
+# ---- 配置与日志（M0）----
+PyYAML>=6.0.1
+
+# ---- 自动化控制 / RPA（M1-M2）----
+pyautogui>=0.9.54
+pywinauto>=0.6.9
+pyperclip>=1.9.0
+
+# ---- 视觉定位：假 UIA 树锚点图匹配（M1）----
+opencv-python>=4.10.0
+numpy>=1.26.0
+Pillow>=10.4.0
+
+# ---- 推理接口（M5）----
+openai>=1.40.0
+
+# ---- 控制台 / 热键（M0-08 / M6）----
+rich>=13.7.0
+pynput>=1.7.7
+
+# ---- 测试 ----
+pytest>=8.2.0

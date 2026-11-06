@@ -1,0 +1,96 @@
+# ============================================================================
+# DSH-WeChat-Agent V1.0 主配置（里程碑 M0-02）
+# 说明：所有相对路径相对本文件所在目录解析；不要提交 .env，只提交 .env.example。
+# 修改后自检：python -m wechat_agent selftest
+# ============================================================================
+schema: 1
+
+app:
+  log_level: INFO                # DEBUG | INFO | WARNING | ERROR
+  data_dir: ./data               # 运行时目录（db / 锚点图 / 截图 / 日志 / 备份）
+  dry_run: true                  # true = 只采集与推理，不真实发送（首次运行必须为 true）
+  tick_interval: 2.0             # 主循环轮询间隔（秒）
+  max_hours: 8                   # 连续运行上限，超时自动暂停
+
+wechat:
+  window_title_regex: "^(微信|WeChat)$"
+  process_names: ["WeChat.exe", "WeChatAppEx.exe"]
+  activate_before_action: true
+  chat_type_default: private     # private | group
+  switch_chat: search_box        # search_box（推荐） | session_list
+
+# —— 假 UIA 树（自定义视觉映射层，M1 核心）——
+uia_tree:
+  profile: auto                  # auto = "<分辨率>@<DPI>"，如 "2560x1440@1.25"
+  dir: ./data/uia_tree           # profile JSON 目录
+  anchors_dir: ./data/anchors    # 锚点图目录（按 profile 分子目录）
+  cache_ttl: 2.0                 # 定位结果缓存（秒）；任何界面动作后立即失效
+  match:
+    threshold: 0.88              # 低于此分视为「找不到」，禁止坐标兜底
+    scales: [0.9, 0.95, 1.0, 1.05, 1.1]
+    grayscale: true
+    max_side_px: 1600            # 匹配前降采样上限
+  locate_retries: 2              # 找不到 -> 立即中止本 tick 并重试
+  retry_wait: [0.4, 1.2]
+  allow_ratio_fallback: false    # 硬性 false：可点击元素必须有锚点图
+
+# —— 消息流采集（红线：唯一可读消息内容的路径）——
+capture:
+  drag:
+    from: {x: 0.94, y: 0.14}     # 相对 message_area 元素的比例（避开滚动条/头像）
+    to: {x: 0.06, y: 0.92}
+    steps: 18                    # 分段移动步数（模拟人手）
+    duration: 0.45               # 拖拽总时长（秒）
+  copy_wait: 0.35                # Ctrl+C 后等待剪贴板稳定
+  min_messages: 3                # 一屏少于 3 条视为异常
+  lookback_screens: 3            # 失锚时向上回滚屏数
+  dedup_recent_window: 200       # 去重参考的库内最近条数
+  low_confidence_policy: ignore  # ignore | queue_confirm
+  title_verify: capture_first_sender   # capture_first_sender | search_text
+  restore_clipboard: true        # 采集后恢复主人原剪贴板
+
+llm:
+  provider: deepseek
+  base_url: https://api.deepseek.com
+  model: deepseek-chat
+  temperature: 1.15
+  max_tokens: 400
+  timeout: 25
+  retries: 3
+  history_turns: 12
+  max_prompt_tokens: 3000
+  memory_top_k: 6
+  fail_policy: hold              # hold（转人工） | skip
+
+humanize:
+  perception_delay: [0.3, 1.2]
+  think_delay: [1.5, 5.0]
+  typing_ms_per_char: [35, 90]
+  pre_send_delay: [0.3, 1.4]
+  long_reply_extra: [1.0, 3.0]
+  jitter_enabled: true
+
+ratelimit:
+  per_chat_per_minute: 6
+  per_chat_per_day: 300
+  global_per_hour: 120
+  quiet_hours: ["01:00-07:30"]   # 静默时段只入库不回复
+  cooldown_after_send: [2, 5]
+
+safety:
+  panic_hotkey: "ctrl+alt+q"
+  pause_hotkey: "ctrl+alt+p"
+  max_consecutive_failures: 3
+  screenshot_on_failure: true
+  sensitive_words: ["身份证", "密码", "转账"]
+  max_reply_chars: 300
+  block_links: true
+
+control:
+  nlu_enabled: true              # 允许自然语言指令（需 LLM，M6）
+  confirm_override_send: true    # /say 前二次确认
+
+plugins:
+  moments:
+    enabled: false               # V1.0 默认关闭
+    default_visibility: private  # private | public | list

@@ -1,0 +1,17 @@
+# DSH-WeChat-Agent V1.0 —— M0 阶段最小依赖（跨版本安全）
+#
+# 用途：Python 3.14 等新版本环境下，完整 requirements.txt 中的 RPA 依赖可能缺少
+# 预编译 wheel。先装本文件即可推进 M0（配置/日志/双库/DI/控制台骨架）与
+# M3（记忆去重，纯标准库 + fixtures）与 M5（LLM 客户端，仅 openai）。
+#
+# 降级策略（按优先级）：
+#   A. 先在 3.14 上执行：pip install --dry-run -r requirements.txt
+#      全部可解析 -> 直接装完整依赖。
+#   B. 只要 pywin32 / pywinauto / opencv-python / pynput 任一不可解析：
+#      不要 --no-binary 强编译；用 `py -3.12 -m venv venv` 重建虚拟环境，
+#      再 pip install -r requirements.txt（3.12 全绿，已验证路线）。
+#   C. 必须留在 3.14 时：装本文件 + wechat_agent 纯标准库模块，
+#      将 M1/M2/M6 的真机 DoD 标记 BLOCKED，不虚报完成。
+
+PyYAML>=6.0.1
+pytest>=8.2.0

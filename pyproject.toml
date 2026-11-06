@@ -1,0 +1,100 @@
+# ============================================================================
+# DSH-WeChat-Agent —— 项目与质量门禁配置（M0-F-01）
+# 纪律：本文件不承载业务逻辑；工具链配置的唯一真源。
+# 版本控制：Git 相关操作由主控官执行，本仓库不包含 .gitignore / .git。
+# ============================================================================
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dsh-wechat-agent"
+version = "0.1.0"
+description = "零 Hook 的微信智能对话代理（Vision-RPA Edition），底部为可复用的多平台 RPA 框架"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "PyYAML>=6.0.1",
+]
+
+[project.optional-dependencies]
+rpa = [
+  "pyautogui>=0.9.54",
+  "pywinauto>=0.6.9",
+  "pyperclip>=1.9.0",
+  "opencv-python>=4.10.0",
+  "numpy>=1.26.0",
+  "Pillow>=10.4.0",
+  "pynput>=1.7.7",
+]
+llm = ["openai>=1.40.0"]
+console = ["rich>=13.7.0"]
+dev = [
+  "pytest>=8.2.0",
+  "pytest-cov>=5.0.0",
+  "ruff>=0.6.0",
+  "mypy>=1.11.0",
+]
+
+[project.scripts]
+wechat-agent = "wechat_agent.main:main"
+
+[tool.setuptools.packages.find]
+include = ["wechat_agent*", "dsh_rpa*"]
+exclude = ["tests*", "data*", "docs*", "scripts*"]
+
+# ---------------------------------------------------------------- ruff
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+src = [".", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = [
+  # 中文注释/文档字符串按字符计长，E501 对 CJK 过于苛刻；行宽由 formatter 控制
+  "E501",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011"]
+
+# ---------------------------------------------------------------- pytest
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-ra"
+# M0-F-02 起旧模块路径（wechat_agent.core.*）保留 shim 并打 DeprecationWarning；
+# 测试内部会正常导入这些 shim，属于预期行为，这里显式过滤保持输出纯净。
+filterwarnings = [
+  "ignore:.*已迁移到 dsh_rpa.*:DeprecationWarning",
+]
+
+# ---------------------------------------------------------------- coverage
+[tool.coverage.run]
+source = ["wechat_agent", "dsh_rpa"]
+branch = true
+omit = [
+  "*/__main__.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 85
+exclude_also = [
+  "if TYPE_CHECKING:",
+  "raise NotImplementedError",
+]
+
+# ---------------------------------------------------------------- mypy
+# F-02 起生效：dsh_rpa 框架包必须 mypy strict 通过。
+# dsh_rpa 落地前，门禁脚本自动跳过并提示，不会产生假绿。
+[tool.mypy]
+python_version = "3.10"
+strict = true
+files = ["dsh_rpa"]
+warn_unreachable = true
+show_error_codes = true
+pretty = true
