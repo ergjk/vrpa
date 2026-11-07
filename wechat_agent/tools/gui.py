@@ -3,14 +3,20 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import os
 import queue
 import subprocess
 import sys
+import tempfile
 import threading
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
+
+import yaml
+
+from wechat_agent.core.next_action import explain_exit
 
 __all__ = ["run_gui"]
 
@@ -91,6 +97,41 @@ def _build_live_cmd(chat: str, config: str | None) -> list[str]:
     return cmd
 
 
+def _is_admin() -> bool:
+    try:
+        import ctypes
+
+        return bool(ctypes.windll.shell32.IsUserAnAdmin())
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _make_temp_config(base_config: str | None, chat: str) -> Path:
+    """生成一次性真实发送配置；主配置只读，不修改。"""
+    source = Path(base_config) if base_config else ROOT / "config.yaml"
+    raw = yaml.safe_load(source.read_text(encoding="utf-8"))
+    if not isinstance(raw, dict):
+        raise ValueError("配置根节点不是 mapping")
+    app = raw.setdefault("app", {})
+    safety = raw.setdefault("safety", {})
+    if not isinstance(app, dict) or not isinstance(safety, dict):
+        raise ValueError("app/safety 节点不是 mapping")
+    app["dry_run"] = False
+    safety["allow_real_send"] = True
+    safety["real_send_allowlist"] = [chat]
+    fd, tmp = tempfile.mkstemp(prefix="vrpa_gui_live_", suffix=".yaml")
+    os.close(fd)
+    path = Path(tmp)
+    path.write_text(yaml.safe_dump(raw, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    return path
+
+
+def _cleanup_temp(path: Path | None) -> None:
+    if path is not None:
+        with contextlib.suppress(OSError):
+            path.unlink(missing_ok=True)
+
+
 class _GuiApp:  # pragma: no cover - Tkinter 界面，逻辑测试覆盖辅助函数
     def __init__(self, root: Any, config_path: str | None, chat: str) -> None:
         import tkinter as tk
@@ -102,6 +143,8 @@ class _GuiApp:  # pragma: no cover - Tkinter 界面，逻辑测试覆盖辅助�
         self._config_path = config_path
         self._chat = chat
         self._proc: subprocess.Popen[str] | None = None
+        self._temp_config: Path | None = None
+        self._active_kind = ""
         self._events: queue.Queue[tuple[str, object]] = queue.Queue()
         self._log: Any = scrolledtext.ScrolledText(root, height=18, width=110, state="disabled")
         self._status_var = tk.StringVar(value="状态：未运行")
@@ -109,7 +152,7 @@ class _GuiApp:  # pragma: no cover - Tkinter 界面，逻辑测试覆盖辅助�
         self._switch_var = tk.BooleanVar(value=False)
         self._phrase_var = tk.StringVar()
         self._text_var = tk.StringVar()
-        self._real_hint = tk.StringVar(value="真实发送默认锁定")
+        self._real_hint = tk.StringVar(value="真实发送：临时解锁模式（主配置保持双锁）")
 
         root.title("WeChat Agent 控制台（安全模式）")
         root.geometry("900x620")
@@ -127,18 +170,18 @@ class _GuiApp:  # pragma: no cover - Tkinter 界面，逻辑测试覆盖辅助�
         ttk.Button(row, text="停止/紧急停止 (Ctrl+Alt+Q)", command=self._stop).pack(side="left", padx=4)
         ttk.Button(row, text="打开日志目录", command=self._open_logs).pack(side="left", padx=4)
 
-        real = ttk.LabelFrame(frame, text="真实发送（默认锁定，需人工确认）", padding=6)
+        real = ttk.LabelFrame(frame, text="真实发送（临时解锁 1 条，结束自动清理）", padding=6)
         real.pack(fill="x", pady=6)
         ttk.Label(real, textvariable=self._real_hint, foreground="#a33").pack(anchor="w")
-        ttk.Checkbutton(real, text="我确认 dry_run=false 且 allow_real_send=true", variable=self._switch_var).pack(
+        ttk.Checkbutton(real, text="我确认临时解锁并发送 1 条（主配置双锁保持不变）", variable=self._switch_var).pack(
             anchor="w"
         )
         phrase_row = ttk.Frame(real)
         phrase_row.pack(fill="x", pady=2)
         ttk.Label(phrase_row, text="确认短语（输入“我确认发送”）：").pack(side="left")
         ttk.Entry(phrase_row, textvariable=self._phrase_var, width=20).pack(side="left")
-        ttk.Button(phrase_row, text="发送 1 条", command=self._send_one).pack(side="left", padx=4)
-        ttk.Button(phrase_row, text="live 1 条", command=self._live_one).pack(side="left", padx=4)
+        ttk.Button(phrase_row, text="临时解锁并发送 1 条", command=self._send_one).pack(side="left", padx=4)
+        ttk.Button(phrase_row, text="临时解锁并 live 1 条", command=self._live_one).pack(side="left", padx=4)
         text_row = ttk.Frame(real)
         text_row.pack(fill="x", pady=2)
         ttk.Label(text_row, text="发送内容：").pack(side="left")
@@ -184,9 +227,13 @@ class _GuiApp:  # pragma: no cover - Tkinter 界面，逻辑测试覆盖辅助�
         self._status_var.set(
             f"状态：{'运行中' if self._proc is not None else '未运行'}"
             f" | dry_run={cfg.app.dry_run} allow_real_send={cfg.safety.allow_real_send}"
-            f" | 消息数={count} | allowlist={list(cfg.safety.real_send_allowlist)}"
+            f" | admin={_is_admin()} | 消息数={count} | allowlist={list(cfg.safety.real_send_allowlist)}"
         )
-        self._real_hint.set("真实发送：已解锁（仍会逐项确认）" if unlocked else "真实发送：锁定（主配置双锁关闭）")
+        self._real_hint.set(
+            "真实发送：主配置已解锁（不建议）；GUI 仍可临时解锁"
+            if unlocked
+            else "真实发送：临时解锁模式（主配置保持双锁）"
+        )
 
     def _start(self, cmd: list[str], label: str) -> None:
         if self._proc is not None:
@@ -213,6 +260,9 @@ class _GuiApp:  # pragma: no cover - Tkinter 界面，逻辑测试覆盖辅助�
             )
         except Exception as exc:  # noqa: BLE001
             self._append_log(f"启动失败：{exc}")
+            _cleanup_temp(self._temp_config)
+            self._temp_config = None
+            self._active_kind = ""
             return
         self._append_log(f"启动 {label}：{' '.join(cmd)}")
         self._status_var.set(f"状态：{label} 运行中")
@@ -237,16 +287,42 @@ class _GuiApp:  # pragma: no cover - Tkinter 界面，逻辑测试覆盖辅助�
     def _send_one(self) -> None:
         if not self._require_real_confirmation():
             return
+        if not _is_admin():
+            self._messagebox.showerror("权限不足", "真实发送需要管理员 PowerShell；请以管理员身份重启 GUI。")
+            return
+        if self._proc is not None:
+            self._messagebox.showwarning("忙碌", "已有任务在运行，请先停止。")
+            return
         text = self._text_var.get().strip()
         if not text:
             self._messagebox.showerror("参数错误", "发送内容不能为空")
             return
-        self._start(_build_send_cmd(self._chat_var.get().strip(), text, self._config_path), "send-real")
+        chat = self._chat_var.get().strip()
+        try:
+            self._temp_config = _make_temp_config(self._config_path, chat)
+        except Exception as exc:  # noqa: BLE001
+            self._messagebox.showerror("临时解锁失败", str(exc))
+            return
+        self._active_kind = "send-real"
+        self._start(_build_send_cmd(chat, text, str(self._temp_config)), "send-real")
 
     def _live_one(self) -> None:
         if not self._require_real_confirmation():
             return
-        self._start(_build_live_cmd(self._chat_var.get().strip(), self._config_path), "live-1")
+        if not _is_admin():
+            self._messagebox.showerror("权限不足", "真实发送需要管理员 PowerShell；请以管理员身份重启 GUI。")
+            return
+        if self._proc is not None:
+            self._messagebox.showwarning("忙碌", "已有任务在运行，请先停止。")
+            return
+        chat = self._chat_var.get().strip()
+        try:
+            self._temp_config = _make_temp_config(self._config_path, chat)
+        except Exception as exc:  # noqa: BLE001
+            self._messagebox.showerror("临时解锁失败", str(exc))
+            return
+        self._active_kind = "live-1"
+        self._start(_build_live_cmd(chat, str(self._temp_config)), "live-1")
 
     def _stop(self) -> None:
         if self._proc is None:
@@ -305,13 +381,33 @@ class _GuiApp:  # pragma: no cover - Tkinter 界面，逻辑测试覆盖辅助�
                 self._append_log("收到全局紧急停止热键 Ctrl+Alt+Q")
                 self._stop()
             elif kind == "done":
-                self._append_log(f"任务结束，退出码={value}")
+                code = int(value)  # type: ignore[arg-type]
+                kind_done = self._active_kind
                 self._proc = None
+                self._active_kind = ""
+                self._append_log(f"任务结束，退出码={code}")
+                if kind_done in {"send-real", "live-1"}:
+                    _cleanup_temp(self._temp_config)
+                    self._temp_config = None
+                    self._append_log("临时配置已清理；主配置保持 dry_run=true / allow_real_send=false。")
+                    if code == 0:
+                        received = self._messagebox.askyesno(
+                            "确认收到",
+                            "临时解锁已恢复。测试账号是否已收到这条消息？",
+                        )
+                        self._append_log(
+                            "已确认收到；本次灰度闭环。" if received else "未确认收到；请检查微信/日志，临时锁已恢复。"
+                        )
+                    else:
+                        hint = explain_exit(code)
+                        self._append_log(f"NEXT: {hint.title} —— {hint.next_action}")
                 self._refresh()
         self._root.after(200, self._poll)
 
     def _on_close(self) -> None:
         self._stop()
+        _cleanup_temp(self._temp_config)
+        self._temp_config = None
         self._root.destroy()
 
 
