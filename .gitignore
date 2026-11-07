@@ -32,3 +32,5 @@ logs/
 # ---- 操作系统 ----
 .DS_Store
 Thumbs.db
+# 一次性真实发送配置（本地临时）
+config_real_send_once.yaml
