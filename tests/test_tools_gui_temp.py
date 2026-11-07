@@ -29,6 +29,7 @@ def test_make_temp_config_unlocks_only_temp(tmp_path: Path) -> None:
         assert data["app"]["dry_run"] is False
         assert data["safety"]["allow_real_send"] is True
         assert data["safety"]["real_send_allowlist"] == ["王衢665"]
+        assert Path(data["app"]["data_dir"]).is_absolute()
     finally:
         _cleanup_temp(temp)
     assert not temp.exists()

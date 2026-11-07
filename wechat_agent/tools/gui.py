@@ -106,6 +106,15 @@ def _is_admin() -> bool:
         return False
 
 
+def _abs_path(value: object, base: Path) -> object:
+    if not isinstance(value, str) or not value.strip():
+        return value
+    candidate = Path(value)
+    if candidate.is_absolute() or value.startswith("\\\\"):
+        return value
+    return str((base / candidate).resolve())
+
+
 def _make_temp_config(base_config: str | None, chat: str) -> Path:
     """生成一次性真实发送配置；主配置只读，不修改。"""
     source = Path(base_config) if base_config else ROOT / "config.yaml"
@@ -116,6 +125,17 @@ def _make_temp_config(base_config: str | None, chat: str) -> Path:
     safety = raw.setdefault("safety", {})
     if not isinstance(app, dict) or not isinstance(safety, dict):
         raise ValueError("app/safety 节点不是 mapping")
+    base = source.parent
+    if "data_dir" in app:
+        app["data_dir"] = _abs_path(app["data_dir"], base)
+    uia = raw.get("uia_tree")
+    if isinstance(uia, dict):
+        for key in ("dir", "anchors_dir", "profile_path", "anchors_root"):
+            if key in uia:
+                uia[key] = _abs_path(uia[key], base)
+    llm = raw.get("llm")
+    if isinstance(llm, dict) and "persona_path" in llm:
+        llm["persona_path"] = _abs_path(llm["persona_path"], base)
     app["dry_run"] = False
     safety["allow_real_send"] = True
     safety["real_send_allowlist"] = [chat]
