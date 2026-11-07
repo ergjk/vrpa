@@ -270,12 +270,15 @@ class WeChatPerception:
                 last_sentinel = f"__vrpa_clipboard_{uuid4().hex}__"
                 self._driver.clipboard_set(last_sentinel)
                 attempt_duration = float(duration) if index == 0 else max(float(duration), 0.6)
+                distance = abs(attempt_end[1] - attempt_start[1])
+                jitter = min(float(drag.jitter_px), max(1.0, distance / 40.0))
+
                 self._driver.drag(
                     attempt_start,
                     attempt_end,
                     steps=drag.steps,
                     duration=attempt_duration,
-                    jitter=float(drag.jitter_px),
+                    jitter=jitter,
                     hold_before=float(drag.hold_before),
                     hold_after=_sample_end_hold(multi=multi_message),
                 )
