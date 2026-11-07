@@ -251,9 +251,8 @@ class WeChatPerception:
             scroll_methods.append("ctrl+end")
             self._sleep(0.4)
 
-        if multi_message:
-            # 多条采集先从底部开始：保证最新消息一定在可视区内
-            _reset_to_bottom()
+        # 多条采集：不回底。选区范围由起点行和终点高度决定，终点越界后
+        # 微信会以约 13 条/秒自动滚动；预先回底反而会把选区限制在当前屏。
 
         text = ""
         last_sentinel = ""

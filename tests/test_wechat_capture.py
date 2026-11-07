@@ -154,7 +154,7 @@ def test_capture_retries_after_scroll_to_bottom(tmp_path: Path) -> None:
     assert driver.scrolls[0][2] < 0  # 负值向消息列表底部滚动
 
 
-def test_multi_mode_prescrolls_bottom(tmp_path: Path) -> None:
+def test_multi_mode_does_not_prescroll(tmp_path: Path) -> None:
     text = BASE_TEXT.replace("from: {x: 0.94, y: 0.14}", "from: {x: 0.08, y: 0.98}")
     text = text.replace("to: {x: 0.06, y: 0.92}", "to: {x: 0.90, y: 0.00}")
     text = text.replace("data_dir: ./data", f"data_dir: {tmp_path.as_posix()}/data", 1)
@@ -171,7 +171,7 @@ def test_multi_mode_prescrolls_bottom(tmp_path: Path) -> None:
         sleep=lambda _s: None,
     )
     assert perception.capture("测试会话") == CAPTURED
-    assert driver.scrolls and driver.scrolls[0][2] < 0  # 向下滚到底部
+    assert driver.scrolls == []  # 多条目不清空当前滚动位置，靠越界自动滚动
     assert driver.drags
 
 
