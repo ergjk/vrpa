@@ -85,7 +85,9 @@ def _parse_parents(items: Sequence[str]) -> dict[str, str]:
     return parents
 
 
-_CONTAINER_ELEMENTS = frozenset({"main_window", "message_area", "drag_start_area", "bubble_avatar_area"})
+_CONTAINER_ELEMENTS = frozenset(
+    {"main_window", "message_area", "drag_start_area", "bubble_avatar_area", "input_box_area"}
+)
 
 _ELEMENT_HINTS: dict[str, str] = {
     "main_window": "整个微信主窗口",
@@ -93,6 +95,7 @@ _ELEMENT_HINTS: dict[str, str] = {
     "search_box": "左上角搜索输入框",
     "message_area": "中间消息列表区域（标题下、输入框上）",
     "input_box": "底部文本输入框",
+    "input_box_area": "底部文本输入区（静态矩形，用于点击/粘贴）",
     "send_button": "底部「发送」按钮",
     "drag_start_area": "鼠标起点区（显式框选；优先用 bubble_avatar_area 自动求补集）",
     "bubble_avatar_area": "气泡-头像区（用于从文本框区求补集得到鼠标起点区）",

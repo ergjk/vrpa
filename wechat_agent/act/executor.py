@@ -96,7 +96,10 @@ class WeChatExecutor:
             raise VerifyFailed("目标校验失败：真实发送缺少 window/driver/capture/tree 依赖")
         try:
             self._window.ensure_foreground()
-            input_rect = self._tree.locate("input_box")
+            try:
+                input_rect = self._tree.locate("input_box_area")
+            except Exception:
+                input_rect = self._tree.locate("input_box")
         except Exception as exc:  # noqa: BLE001 - 统一转换为校验失败
             raise VerifyFailed(f"目标校验失败：{exc}") from exc
         if click_input:

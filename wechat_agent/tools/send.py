@@ -84,7 +84,10 @@ def _run_real(args: argparse.Namespace, config: object) -> int:
         while wait > 0:
             time.sleep(min(1.0, wait))
             wait -= 1.0
-        rect = tree.locate("input_box")
+        try:
+            rect = tree.locate("input_box_area")
+        except Exception:
+            rect = tree.locate("input_box")
         driver.clipboard_set(args.text)
         driver.hotkey("ctrl", "v")
         time.sleep(0.6)
@@ -115,7 +118,10 @@ def _run_real(args: argparse.Namespace, config: object) -> int:
 
         perception.activate()
         perception.switch_session(args.chat)
-        rect = tree.locate("input_box")
+        try:
+            rect = tree.locate("input_box_area")
+        except Exception:
+            rect = tree.locate("input_box")
         x, y, w, h = rect.x, rect.y, rect.width, rect.height
         points = {
             "center": (x + w // 2, y + h // 2),
