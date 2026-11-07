@@ -73,8 +73,21 @@ def test_real_send_requires_dependencies(tmp_path: Path) -> None:
         executor.send("张三", "你好")
 
 
+class _InputDriver(FakeDriver):
+    """模拟输入框 Ctrl+C：把输入内容复制到剪贴板。"""
+
+    def __init__(self, copy_text: str) -> None:
+        super().__init__()
+        self._copy_text = copy_text
+
+    def hotkey(self, *keys: str) -> None:
+        super().hotkey(*keys)
+        if keys == ("ctrl", "c"):
+            self.clipboard_set(self._copy_text)
+
+
 def test_real_send_three_checks_passed(tmp_path: Path) -> None:
-    driver = FakeDriver()
+    driver = _InputDriver("你好")
     executor = WeChatExecutor(
         _config(tmp_path, dry_run=False),
         window=WeChatWindow(CFG, FakeWindowBackend(INFO, foreground=False)),
@@ -86,7 +99,7 @@ def test_real_send_three_checks_passed(tmp_path: Path) -> None:
     )
     outcome = executor.send("张三", "你好", trigger="console")
     assert outcome.ok and outcome.stage == "sent"
-    assert driver.clipboard_sets == ["你好"]
+    assert driver.clipboard_sets == ["你好", "__vrpa_input_check__", "你好"]
     assert driver.hotkeys == [("ctrl", "a"), ("ctrl", "v"), ("ctrl", "a"), ("ctrl", "c"), ("end",), ("enter",)]
     assert executor.checks is not None and executor.checks.passed
 
@@ -95,7 +108,7 @@ def test_real_send_verify_failure(tmp_path: Path) -> None:
     executor = WeChatExecutor(
         _config(tmp_path, dry_run=False),
         window=WeChatWindow(CFG, FakeWindowBackend(INFO)),
-        driver=FakeDriver(),
+        driver=_InputDriver("你好"),
         capture=lambda _chat: "别的消息",
         tree=FakeElementTree(element_rects={"input_box": Rect(10, 10, 100, 30)}),
         allow_real_send=True,

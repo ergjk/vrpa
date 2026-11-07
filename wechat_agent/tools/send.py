@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import ctypes
 import json
 import sys
+import time
 from collections.abc import Sequence
 
 from vrpa.errors import AgentFrameworkError
@@ -57,6 +59,12 @@ def _run_real(args: argparse.Namespace, config: object) -> int:
     allowlist = tuple(config.safety.real_send_allowlist)  # type: ignore[attr-defined]
     if args.chat not in allowlist:
         return _print_refusal(f"会话 {args.chat!r} 不在 real_send_allowlist={list(allowlist)}")
+    try:
+        is_admin = bool(ctypes.windll.shell32.IsUserAnAdmin())
+    except Exception:  # noqa: BLE001
+        is_admin = False
+    if not is_admin:
+        return _print_refusal("真实发送需要管理员 PowerShell（否则鼠标/键盘注入会被系统丢弃）")
 
     tree = WeChatElementTree(config)  # type: ignore[arg-type]
     window = WeChatWindow(config)  # type: ignore[arg-type]
@@ -64,9 +72,15 @@ def _run_real(args: argparse.Namespace, config: object) -> int:
     perception = WeChatPerception(config, tree=tree, driver=driver, window=window)  # type: ignore[arg-type]
 
     def _capture_after_send(session: str) -> str:
-        with contextlib.suppress(Exception):
-            perception.scroll_to_bottom()
-        return str(perception.capture(session))
+        last = ""
+        for _ in range(3):
+            with contextlib.suppress(Exception):
+                perception.scroll_to_bottom()
+            last = str(perception.capture(session))
+            if args.text.strip() in last:
+                return last
+            time.sleep(0.8)
+        return last
 
     executor = WeChatExecutor(
         config,  # type: ignore[arg-type]
@@ -83,6 +97,15 @@ def _run_real(args: argparse.Namespace, config: object) -> int:
         message_id = _writeback(config, args.chat, args.text)
     except AgentFrameworkError as exc:
         print(f"SEND ERROR: {exc}", file=sys.stderr)
+        with contextlib.suppress(Exception):
+            import cv2
+
+            from vrpa.vision.screen import AutoScreenSource
+
+            stamp = time.strftime("%Y%m%d_%H%M%S")
+            path = f"data/reports/send_failed_{stamp}.png"
+            cv2.imwrite(path, AutoScreenSource().capture())
+            print(f"SEND DIAG: {path}", file=sys.stderr)
         return int(exc.exit_code)
 
     payload = {
