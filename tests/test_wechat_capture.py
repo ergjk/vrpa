@@ -230,8 +230,7 @@ def test_multi_capture_uses_vertical_start(tmp_path: Path) -> None:
     )
     assert perception.capture("测试会话") == CAPTURED
     start_point, end_point, _steps, _duration = driver.drags[0]
-    assert start_point[1] == AREA.y + 2  # 顶部边界附近
-    assert start_point[0] > AREA.center[0]  # 优先右侧补集
+    assert start_point == (AREA.center[0], AREA.y + 2)
     assert 0 < abs(end_point[0] - start_point[0]) <= 20  # 竖向拖动 + 小水平偏移，避免零宽矩形
     assert perception.last_capture_info["start_source"].startswith("multi_vertical")
     assert perception.last_capture_info["planned_attempts"] == 1

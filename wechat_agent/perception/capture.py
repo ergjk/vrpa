@@ -183,34 +183,22 @@ class WeChatPerception:
         downward = drag.to_y > drag.from_y
         start_source = "config"
         if multi_message:
-            # 起点回到讨论过的位置：消息区顶部边界附近；x 取起点区
-            # （drag_start_area）或“文本框区 - 气泡头像区”补集。
+            # 起点必须在对话文字区域内（横向位置不影响选区，但不能落在最右侧空白）。
+            # 多条目从顶部中心向下；历史从底部中心向上。
             start_area = None
             try:
                 start_area = self._tree.locate("drag_start_area")
             except (ElementNotVisible, TreeConfigError):
                 start_area = None
-            bubble_area = None
-            if start_area is None:
-                try:
-                    bubble_area = self._tree.locate("bubble_avatar_area")
-                except (ElementNotVisible, TreeConfigError):
-                    bubble_area = None
-            x = area.center[0]
-            source_x = "center"
-            if start_area is not None:
-                x = start_area.center[0]
-                source_x = "drag_start_area"
-            elif bubble_area is not None:
-                computed = _start_outside_bubble(area, bubble_area)
-                if computed is not None:
-                    x = computed[0]
-                    source_x = "bubble_complement"
-            y = start_area.y + 2 if start_area is not None else area.y + 2
-            start_source = "history_vertical" if not downward else "multi_vertical"
-            if source_x != "center":
-                start_source = f"{start_source}:{source_x}"
-            # x 完全相同 ≠ 有效矩形；保留竖向拖动，仅加约 12px 水平偏移。
+            x = start_area.center[0] if start_area is not None else area.center[0]
+            source = "drag_start_area" if start_area is not None else "center"
+            if downward:
+                y = start_area.y + 2 if start_area is not None else area.y + 2
+                start_source = f"multi_vertical:{source}"
+            else:
+                y = area.y + area.height - 2
+                start_source = f"history_vertical:{source}"
+            # x 完全相同 ≠ 有效矩形；仅加约 12px 水平偏移。
             offset_x = 12
             end_x = x + offset_x if x + offset_x < area.right - 2 else x - offset_x
             start = (x, y)
