@@ -13,8 +13,8 @@
 
 from __future__ import annotations
 
-import os
 import contextlib
+import os
 import sys
 import traceback
 from collections.abc import Callable, Sequence
