@@ -27,6 +27,7 @@ def _parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--image", default=None, help="离线校验截图（PNG/JPG），不传则真实截屏")
     parser.add_argument("--strict", action="store_true", help="严格模式：锚点文件必须齐全")
     parser.add_argument("--json", action="store_true", help="JSON 输出")
+    parser.add_argument("--activate", action="store_true", help="真实校验前先激活微信窗口（真机推荐）")
     return parser.parse_args(list(argv))
 
 
@@ -55,6 +56,10 @@ def run_validate_tree(argv: Sequence[str]) -> int:
 
     try:
         config = load_config(args.config)
+        if args.activate and args.image is None:
+            from wechat_agent.perception.window import WeChatWindow
+
+            WeChatWindow(config).ensure_foreground()
         locator = build_locator(config, image=Path(args.image) if args.image else None)
         report = locator.validate(required_ids=locator.element_ids(), check_anchor_files=True)
     except ProfileMismatch as exc:

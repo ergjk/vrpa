@@ -79,6 +79,21 @@ Write-Host "iterations: $Iterations   interval: ${IntervalSeconds}s"
 Write-Host "log      : $jsonl"
 Write-Host ""
 
+if (-not $DryRun) {
+    Write-Host "预检：激活微信并执行 validate-tree --strict ..."
+    $checkArgs = @("-m", "wechat_agent", "validate-tree", "--strict", "--activate", "--json")
+    if ($Config) { $checkArgs += @("--config", $Config) }
+    $check = Invoke-PythonProcess -FilePath $Python -Arguments $checkArgs
+    if ($check.ExitCode -ne 0) {
+        Write-Host "预检失败：锚点/窗口/主题与校准不一致，浸泡已取消。" -ForegroundColor Red
+        Write-Host $check.StdOut
+        Write-Host $check.StdErr
+        exit 2
+    }
+    Write-Host "预检通过：锚点/窗口/主题一致"
+    Write-Host ""
+}
+
 $results = @()
 $startedAt = Get-Date
 $failed = $false
