@@ -9,7 +9,7 @@ import pytest
 
 from vrpa.memory.db import Databases, init_databases
 from vrpa.memory.jobs import MemoryExtractJob, TaskQueue
-from vrpa.memory.long_term import LongTermMemory
+from vrpa.memory.long_term import LongTermMemory, extract_candidates
 from vrpa.memory.store import SQLiteMemoryStore
 from vrpa.ports import Message
 
@@ -65,7 +65,7 @@ def test_queue_cancel(queue: TaskQueue) -> None:
 
 
 def test_memory_extract_job_success(queue: TaskQueue, memory: LongTermMemory) -> None:
-    job = MemoryExtractJob(queue, memory, retry_delay=0.0)
+    job = MemoryExtractJob(queue, memory, extractor=extract_candidates, retry_delay=0.0)
     task_id = job.enqueue("张三", [Message(direction="in", content="我喜欢喝美式")])
     assert job.run_once() is True
     task = queue.get(task_id)
@@ -90,7 +90,7 @@ def test_memory_extract_job_retry_then_failed(queue: TaskQueue, memory: LongTerm
 
 
 def test_run_pending_batch(queue: TaskQueue, memory: LongTermMemory) -> None:
-    job = MemoryExtractJob(queue, memory, retry_delay=0.0)
+    job = MemoryExtractJob(queue, memory, extractor=extract_candidates, retry_delay=0.0)
     job.enqueue("张三", [Message(direction="in", content="我喜欢猫")])
     job.enqueue("张三", [Message(direction="in", content="我住在杭州")])
     assert job.run_pending(limit=10) == 2

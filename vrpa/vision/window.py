@@ -151,6 +151,17 @@ class PywinautoWindowBackend:
                 with contextlib.suppress(Exception):
                     win32gui.SwitchToThisWindow(hwnd, True)
             if int(win32gui.GetForegroundWindow()) != int(hwnd):
+                # 前台锁对 AttachThreadInput 也拒绝时，点击标题栏空白处获取焦点。
+                # 只点窗口顶部中间，不触碰消息区/输入框/发送按钮。
+                with contextlib.suppress(Exception):
+                    import time
+
+                    import pyautogui  # type: ignore[import-untyped]
+
+                    left, top, right, _bottom = win32gui.GetWindowRect(hwnd)
+                    pyautogui.click((left + right) // 2, top + 12)
+                    time.sleep(0.3)
+            if int(win32gui.GetForegroundWindow()) != int(hwnd):
                 raise WindowNotForeground(f"激活窗口失败（hwnd={hwnd}）：前台锁未解除")
         except WindowNotForeground:
             raise

@@ -1,7 +1,7 @@
 # VRPA-WeChat-Agent
 
 > **VRPA（Vision RPA）通用 RPA 框架底座 + 微信参考实现** · MIT License
-> 状态：**V1.0 收口 checkpoint**（微信 4.x / Windows；597 项测试全绿 · 覆盖率 85.13% · ruff / mypy strict 全绿 · 默认 `dry_run` · 真实发送默认关闭）
+> 状态：**V1.0 收口 checkpoint**（微信 4.x / Windows；609 项测试全绿 · 覆盖率 85.07% · ruff / mypy strict 全绿 · 默认 `dry_run` · 真实发送默认关闭）
 > M4：队列/拟人延迟/限流/状态机熔断/`--simulate`/接管；M5：OpenAI 兼容客户端（重试+用量）、Prompt 预算裁剪、后处理安全过滤、人设热加载、`llm-ping`。
 
 ## 0. 10 分钟首跑（新用户先看）
@@ -178,7 +178,7 @@ vrpa/                     # 通用框架底座（可独立发布/复用）
   ports.py                #   五端口协议 + 跨层 DTO（M0-F-04）
   platform.py             #   PlatformAdapter 协议 + AdapterRegistry（M0-F-04）
   testing/                #   Fakes + contracts 合规测试套件（M0-F-04）
-tests/                    # 597 项测试（配置/日志/异常/接口/双库/CLI/端口/契约/兼容 shim）
+tests/                    # 609 项测试（配置/日志/异常/接口/双库/CLI/端口/契约/兼容 shim）
 docs/                     # 技术方案、行动清单、架构、ADR、适配器指南
 scripts/quality.ps1|.bat  # 一键质量门禁（ruff + mypy strict + pytest + coverage）
 scripts/mouse_record.py   # 真机调试：记录手动拖选鼠标轨迹（用于校准 capture.drag）
@@ -209,7 +209,7 @@ wechat_agent/             # 微信参考实现（六层模块见 §5.1）
 | 记忆层 | SQLite 双库 + 去重对齐 | 流水去重、长期记忆提炼与召回 | 已实现 M3（HistoryStore / 尾部对齐 / LongTermMemory / 异步 job） |
 | 推理层 | DeepSeek / OpenAI 兼容 API | 上下文组装、回复生成与清洗 | 已实现 M5（客户端/预算/后处理/人设热加载/llm-ping） |
 | 执行层 | `pyautogui` + 三重校验 | 粘贴、校验、回车、状态回写 | 已实现 M6-01（内容/目标/回读三重校验；默认 dry_run，真实发送需显式授权 + 真机验收） |
-| 控制层 | CLI + Tkinter 控制台 | 状态、dry-run 启停、临时解锁发送、失败 NEXT、紧急停止 | 已实现 M6-02 CLI 与 M6-07 GUI（临时解锁灰度已通过 `message_id=103`；托盘/暂停待后续） |
+| 控制层 | CLI + Tkinter 控制台 | 运行/记忆/危险区/开发者四页签；worker 自动提炼；临时解锁发送；失败 NEXT；紧急停止 | 已实现 M6-02 CLI 与 M6-07 GUI（临时解锁灰度已通过 `message_id=103`；托盘/暂停待后续） |
 | 扩展层 | 插件协议 + Task Scheduler | `#发圈` 等 RPA 指令 | 已实现 M6-04（Plugin 协议 + 故障隔离 + moments 示例）；Task Scheduler 待后续 |
 
 ### 5.2 感知层规范：假 UIA 树（微信适配器实现要点）
@@ -273,6 +273,7 @@ python -m wechat_agent run --real --chat 目标会话 --warmup 8 --settle 3 --js
 python -m wechat_agent run --real --chat 目标会话 --warmup 8 --settle 3 --multi --json  # 多条采集：中心起点→终点越界自动滚动（不要先回底）
 python -m wechat_agent run --real --chat 目标会话 --warmup 8 --settle 3 --history --json  # 历史诊断：底部中心→向上越界自动滚动（测试用，不保证入库）
 python -m wechat_agent first-run  # 新用户首跑向导
+python -m wechat_agent memory-extract  # 处理异步记忆提炼任务（LLM 筛选）
 python -m wechat_agent gui        # Tkinter 控制台：临时解锁 1 条，结束自动清理
 scripts\soak_real.bat -Iterations 20 -IntervalSeconds 20  # 真机浸泡（管理员；不真实发送；日志在 data/soak_real/）
 # run --real 输出 timing（warmup/activate/switch_session/capture/ingest/reply/ticks/total 毫秒）
@@ -320,6 +321,32 @@ python -m wechat_agent run --simulate --scenario <场景.json>  # Fake 全链路
 - 真实 dry-run 已接为命令：`run --real --chat 会话 --warmup 8 --settle 3`（真实采集/入库/LLM，不真实发送；单次 `--ticks 1` 只处理 1 条回复，队列剩余属正常）；切会话每个操作间隔由 `capture.switch_delay`（默认 0.5s）控制；`--multi` 多条模式会先滚轮向下 + `PageDown`×5 + `Ctrl+End` 回底，并按 `message_area - (message_area ∩ bubble_avatar_area)` 求起点区后向下越界采集；采集后会对比“解析最新时间 vs 库内最新入向时间”，窗口陈旧则回底重采最多 3 次；终点按住停留 3/5 秒随机（普通模式 2~3s），输出 `capture_info`（planned_attempts/attempt_used/start_point/end_point）；首次失败会回底并换轨迹重试一次；去重允许跳过库尾部不在本次窗口内的消息（如 dry-run 未发送的 out）；
 - 人手化拖拽/停留为 **V1.0 启发式**（时长、抖动、泊松停留），仅作节奏过渡；V1.2 计划用授权采样学习真人节奏（不记录消息内容）。
 
+### 6.1.3 GUI 页签
+
+- **运行**：单轮/多条/历史 dry-run、停止、日志；
+- **记忆**：`worker` 自动开关、间隔、每次上限、立即提炼一次；
+  - worker 只跑 `memory-extract`，不发送微信；
+  - 主任务运行时自动让路；默认关闭；
+- **危险区（红）**：真实发送临时解锁、确认短语、发送内容；
+  - 主配置双锁始终保留，临时配置结束自动删除；
+- **开发者模式**：
+  - `first-run` / `doctor` / `validate-tree` / `report` / `memory-extract`；
+  - 打开 config/identity/日志；
+  - 只读展示 `history_turns`、`memory_top_k`、allowlist；
+  - 不提供绕过 `dry_run`、allowlist 或管理员检查的按钮。
+
+### 6.1.2 选择性记忆（M3/M5）
+
+- **流水库（chat_history）**：全量逐字保存，只做监控/回溯，不直接全量注入 LLM；
+- **核心档案库（memory）**：由异步 `memory_extract` job 提炼，只保留情绪、约定、偏好、关系变化等长期价值内容；
+- 提炼不使用规则硬提取；`LLMMemorySelector` 用“像人一样回忆”的 Prompt 调 LLM，输出 JSON 候选；
+- 主循环只负责把新增消息**入队**（`memory_queued`），不阻塞回复；
+- 单独运行 `python -m wechat_agent memory-extract` 消费任务；
+- M5 Prompt 只注入：
+  - 召回的核心记忆（top_k）；
+  - 最近 `llm.history_turns` 条流水（按 `status='ok'` 过滤）；
+  - 绝不注入全量历史。
+
 ### 6.2 VRPA 适配器快速开始（QQ / 钉钉 / 其他平台）
 
 > 适合：想复用 VRPA 底座做新平台机器人的开发者。**不要改 `vrpa` 底座**，只写适配器。
@@ -335,6 +362,16 @@ python -m wechat_agent run --simulate --scenario <场景.json>  # Fake 全链路
 
 ---
 
+### 6.1.4 A–E 压力测试记录（2026-11-07）
+
+- **A 离线浸泡**：100 + 500 轮，`failures=0`；
+- **B 真机 dry-run**：20/20 轮，`captured=4 / duplicates=4 / failures=0`，无真实发送；
+- **C memory worker**：100 个合成 task，`processed=100`，失败重试通过；
+- **D GUI worker**：启动/停止正常，停止后无残留；
+- **E 真实发送**：临时解锁 `live 1 条`，`sent_count=1`，真实回复 `message_id=117`，`failures=0`；
+  - 临时配置自动删除；
+  - 主配置保持 `dry_run=true / allow_real_send=false`。
+
 ## 7. 运行环境与依赖
 
 - **操作系统**：Windows 10 / 11（RPA 依赖 Win32 窗口与键鼠模拟）
@@ -349,7 +386,7 @@ python -m wechat_agent run --simulate --scenario <场景.json>  # Fake 全链路
 
 ```powershell
 .\scripts\quality.bat          # 一键：ruff check → ruff format → mypy strict → pytest+coverage
-python -m pytest tests -q     # 单元测试（当前 597 passed）
+python -m pytest tests -q     # 单元测试（当前 609 passed）
 python -m mypy                # vrpa 框架包 strict
 ```
 
@@ -358,8 +395,8 @@ python -m mypy                # vrpa 框架包 strict
 | 静态检查 | ruff（E/F/I/UP/B/SIM） | 全绿 |
 | 格式 | ruff format | 全绿 |
 | 类型 | mypy strict（`vrpa`） | 0 error |
-| 测试 | pytest | 597 passed |
-| 覆盖率 | pytest-cov | 85.13%（门禁 ≥85%） |
+| 测试 | pytest | 609 passed |
+| 覆盖率 | pytest-cov | 85.07%（门禁 ≥85%） |
 | 一键 | `scripts\quality.bat` | `QUALITY GATE: PASS` |
 
 ---
@@ -454,6 +491,7 @@ python -m mypy                # vrpa 框架包 strict
 | 真实发送入口（`send --real`，默认关闭） | ✅ 两条灰度已通过：`message_id=86`（手动聚焦）、`87`（自动直接粘贴 + 静态输入区）；默认仍关闭 |
 | 受控真实发送循环（`run --live`，默认关闭） | ✅ 首轮实跑通过：`--max-sends 1`、`sent_count=1`、`message_id=100`；失败即停，默认仍关闭 |
 | GUI 临时解锁发送 | ✅ 已通过：`live 1 条`、`message_id=103`；结束自动删除临时配置并弹窗确认收到 |
+| A–E 压力测试 | ✅ A 500 轮离线 / B 20 轮真机 dry-run / C 100 memory tasks / D GUI worker 启停 / E 真实发送 1 条（`message_id=117`） |
 | V1.1 / V1.2 | ⬜ 仅规划 |
 
 **当前位置**：V1.0 收口 checkpoint；真实发送默认关闭，仅保留受控灰度入口；下一步是采集稳定性、live 多轮 soak、GUI 托盘/暂停恢复。

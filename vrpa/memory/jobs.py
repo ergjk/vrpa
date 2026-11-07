@@ -16,7 +16,7 @@ from typing import Any
 
 from vrpa.errors import DBError
 from vrpa.memory.db import Databases
-from vrpa.memory.long_term import LongTermMemory, MemoryCandidate, extract_candidates
+from vrpa.memory.long_term import LongTermMemory, MemoryCandidate
 from vrpa.ports import Message
 
 __all__ = ["MemoryExtractJob", "Task", "TaskQueue"]
@@ -172,10 +172,12 @@ class MemoryExtractJob:
         queue: TaskQueue,
         memory: LongTermMemory,
         *,
-        extractor: Callable[[Sequence[Message]], Sequence[MemoryCandidate]] = extract_candidates,
+        extractor: Callable[[Sequence[Message]], Sequence[MemoryCandidate]] | None = None,
         max_attempts: int = 3,
         retry_delay: float = 60.0,
     ) -> None:
+        if extractor is None:
+            raise ValueError("MemoryExtractJob 需要显式 extractor（生产请注入 LLMMemorySelector）")
         self._queue = queue
         self._memory = memory
         self._extractor = extractor

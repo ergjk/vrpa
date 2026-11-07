@@ -28,6 +28,7 @@ from vrpa.scheduling.scheduler import Scheduler
 from wechat_agent.act.executor import WeChatExecutor
 from wechat_agent.brain.client import WeChatBrain
 from wechat_agent.identity import load_identity
+from wechat_agent.memory.job_factory import build_memory_extract_job
 from wechat_agent.memory.pipeline import MessagePipeline
 from wechat_agent.perception.capture import WeChatPerception
 from wechat_agent.perception.parser import WeChatParser
@@ -134,6 +135,7 @@ def execute_dry_run(
             low_confidence_policy=str(config.capture.low_confidence_policy),
             identity=identity,
         )
+        memory_job = None if history_mode else build_memory_extract_job(config, databases, memory_store)
         mode = "echo"
         if brain is None:
             if force_llm or config.api_key():
@@ -165,6 +167,7 @@ def execute_dry_run(
                 max_consecutive_failures=int(config.safety.max_consecutive_failures),
             ),
             control=ControlChannel(),
+            memory_job=memory_job,
         )
         timing: dict[str, float] = {}
         started = time.perf_counter()

@@ -24,7 +24,7 @@ from vrpa.errors import (
     WindowNotForeground,
     WindowNotFound,
 )
-from vrpa.ports import Brain, Executor, IncomingMessage
+from vrpa.ports import Brain, Executor, IncomingMessage, Message
 from vrpa.scheduling.delay import Humanizer
 from vrpa.scheduling.machine import CircuitBreaker, RunState, RunStateMachine
 from vrpa.scheduling.queue import MessageQueue, QueuedMessage
@@ -164,6 +164,7 @@ class Orchestrator:
         control: ControlChannel | None = None,
         sleep: Callable[[float], None] = time.sleep,
         max_replies_per_tick: int = 1,
+        memory_job: Any | None = None,
     ) -> None:
         self._config = config
         self._perception = perception
@@ -179,6 +180,7 @@ class Orchestrator:
         self._control = control or ControlChannel()
         self._sleep = sleep
         self._max_replies = max(1, max_replies_per_tick)
+        self._memory_job = memory_job
         self._tick = 0
         self._chat_index = 0
         self._events: list[str] = []
@@ -274,6 +276,27 @@ class Orchestrator:
                     )
                 )
             events.append(f"ingest:{chat}:{ingested}")
+            if self._memory_job is not None and ingest.inserted:
+                try:
+                    self._memory_job.enqueue(
+                        chat,
+                        [
+                            Message(
+                                direction=str(record.direction),
+                                content=str(record.content),
+                                role=str(record.role or "user"),
+                                sender=record.sender,
+                                ts=record.ts,
+                                source=str(record.source),
+                                status=str(record.status),
+                            )
+                            for record in ingest.inserted
+                        ],
+                        dedupe_key=f"{chat}:{ingest.inserted[-1].id}",
+                    )
+                    events.append("memory_queued")
+                except Exception as exc:  # noqa: BLE001 - 提炼不可阻塞主链路
+                    events.append(f"memory_enqueue_failed:{type(exc).__name__}")
         except RECOVERABLE_ERRORS as exc:
             failures += 1
             self._breaker.record_failure()
@@ -401,7 +424,7 @@ class Orchestrator:
             except Exception as exc:  # noqa: BLE001 - LLM 等失败同样熔断
                 failures += 1
                 self._breaker.record_failure()
-                events.append(f"reply_failed:{type(exc).__name__}")
+                events.append(f"reply_failed:{type(exc).__name__}:{str(exc)[:160]}")
                 self._queue.push(item)
                 break
         return replies

@@ -23,6 +23,7 @@ from wechat_agent.act.executor import WeChatExecutor
 from wechat_agent.brain.client import WeChatBrain
 from wechat_agent.core.next_action import explain_failure, explain_reason
 from wechat_agent.identity import load_identity
+from wechat_agent.memory.job_factory import build_memory_extract_job
 from wechat_agent.memory.pipeline import MessagePipeline
 from wechat_agent.perception.capture import WeChatPerception
 from wechat_agent.perception.element_tree import WeChatElementTree
@@ -89,6 +90,7 @@ def run_live(args: Any) -> int:
             low_confidence_policy=str(config.capture.low_confidence_policy),
             identity=identity,
         )
+        memory_job = build_memory_extract_job(config, databases, memory_store)
         guarded = _GuardedPerception(perception, history, parser)
         brain = WeChatBrain(config, memory=memory_store, identity=identity)
 
@@ -131,6 +133,7 @@ def run_live(args: Any) -> int:
             machine=RunStateMachine(),
             breaker=CircuitBreaker(max_consecutive_failures=1),
             control=ControlChannel(),
+            memory_job=memory_job,
         )
         perception.activate()
         perception.switch_session(args.chat)

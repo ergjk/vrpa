@@ -64,6 +64,7 @@ _COMMAND_SPECS = (
     ("soak", "浸泡测试（--simulate，纯 Fake）", "M6-05", int(ExitCode.USAGE)),
     ("acceptance", "生成真机验收清单（只读）", "M6-06", int(ExitCode.USAGE)),
     ("gui", "Tkinter 控制台（dry-run 启动/停止、状态、真实发送锁定）", "M6-07", int(ExitCode.USAGE)),
+    ("memory-extract", "处理异步记忆提炼任务队列（LLM 人格筛选）", "M3-08", int(ExitCode.USAGE)),
 )
 
 COMMANDS: dict[str, Command] = {
@@ -188,6 +189,13 @@ def _cmd_acceptance(argv: Sequence[str]) -> int:
     from wechat_agent.tools.acceptance import run_acceptance
 
     return run_acceptance(argv)
+
+
+def _cmd_memory_extract(argv: Sequence[str]) -> int:
+    """M3-08：处理异步记忆提炼任务。"""
+    from wechat_agent.tools.memory_extract import run_memory_extract
+
+    return run_memory_extract(argv)
 
 
 def _cmd_first_run(argv: Sequence[str]) -> int:
@@ -334,6 +342,7 @@ register_handler("soak", _cmd_soak)
 register_handler("acceptance", _cmd_acceptance)
 register_handler("gui", _cmd_gui)
 register_handler("first-run", _cmd_first_run)
+register_handler("memory-extract", _cmd_memory_extract)
 
 
 if __name__ == "__main__":

@@ -147,7 +147,7 @@ class SQLiteMemoryStore:
             return ()
         chat_id = self._chat_id(session)
         rows = self._databases.history.execute(
-            f"SELECT {_MESSAGE_COLUMNS} FROM messages WHERE chat_id = ? ORDER BY id DESC LIMIT ?",
+            f"SELECT {_MESSAGE_COLUMNS} FROM messages WHERE chat_id = ? AND status = 'ok' ORDER BY id DESC LIMIT ?",
             (chat_id, limit),
         ).fetchall()
         return tuple(

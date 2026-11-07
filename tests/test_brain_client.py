@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -10,7 +11,7 @@ import pytest
 from vrpa.errors import LLMError
 from vrpa.llm.client import LLMClient
 from vrpa.memory.store import SQLiteMemoryStore
-from vrpa.ports import MemoryItem
+from vrpa.ports import IncomingMessage, MemoryItem
 from wechat_agent.brain.client import WeChatBrain
 from wechat_agent.core.config import load_config
 from wechat_agent.identity import ChatIdentity, IdentityMap
@@ -107,3 +108,27 @@ def test_identity_note_in_system_prompt() -> None:
     assert "你是「王」" in system_content
     assert "对方是「三」" in system_content
     assert "assistant" in system_content
+
+
+def test_history_prompt_is_truncated_to_recent_n(tmp_path: Path) -> None:
+    store = SQLiteMemoryStore(tmp_path)
+    try:
+        store.insert_messages("张三", [IncomingMessage(content=f"m{i}", sender="张三") for i in range(20)])
+        transport = FakeTransport()
+        cfg = replace(CFG, llm=replace(CFG.llm, history_turns=3))
+        client = LLMClient(
+            api_key="sk-test",
+            base_url="https://api.example.com/v1",
+            model="fake-model",
+            transport=transport,
+            sleep=lambda _s: None,
+        )
+        brain = WeChatBrain(cfg, client=client, memory=store)
+        brain.generate([{"role": "user", "content": "m20"}], session="张三")
+        messages = transport.calls[0]["payload"]["messages"]
+        assert len(messages) <= 5  # system + 最近 3 条 + 当前
+        contents = [item["content"] for item in messages]
+        assert "m17" in contents and "m18" in contents and "m19" in contents
+        assert "m1" not in contents and "m2" not in contents
+    finally:
+        store.close()

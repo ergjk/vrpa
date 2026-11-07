@@ -158,3 +158,23 @@ def test_run_report(rig) -> None:
     assert report.state == RunState.RUNNING.value
     assert report.replies == ("你好呀",)
     assert report.queue_left == 0
+
+
+def test_memory_job_enqueued(rig) -> None:
+    orchestrator, _, _, _ = rig
+
+    class _Job:
+        def __init__(self) -> None:
+            self.calls: list[tuple[str, list[object], str]] = []
+
+        def enqueue(self, chat: str, messages, *, dedupe_key: str | None = None) -> None:
+            self.calls.append((chat, list(messages), dedupe_key or ""))
+
+    job = _Job()
+    orchestrator._memory_job = job  # noqa: SLF001
+    orchestrator.start()
+    result = orchestrator.tick(["张三"])
+    assert "memory_queued" in result.events
+    assert job.calls and job.calls[0][0] == "张三"
+    assert job.calls[0][1][0].content == "你好"
+    assert job.calls[0][2].startswith("张三:")
