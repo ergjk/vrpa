@@ -100,6 +100,9 @@ class WeChatExecutor:
         except Exception as exc:  # noqa: BLE001 - 统一转换为校验失败
             raise VerifyFailed(f"目标校验失败：{exc}") from exc
         self._driver.click(*input_rect.center)
+        self._sleep(0.25)
+        self._driver.click(*input_rect.center)
+        self._sleep(0.25)
         self._driver.hotkey("ctrl", "a")
         self._driver.clipboard_set(text)
         self._driver.hotkey("ctrl", "v")

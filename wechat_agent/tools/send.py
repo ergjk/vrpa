@@ -23,6 +23,7 @@ def _parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--real", action="store_true", help="真实发送（需 dry_run=false + allow_real_send=true）")
     parser.add_argument("--i-understand-risk", action="store_true", help="真实发送风险确认（必须显式传入）")
+    parser.add_argument("--rehearse", action="store_true", help="只粘贴到输入框并截图，不按 Enter")
     return parser.parse_args(list(argv))
 
 
@@ -70,6 +71,31 @@ def _run_real(args: argparse.Namespace, config: object) -> int:
     window = WeChatWindow(config)  # type: ignore[arg-type]
     driver = PyAutoGuiDriver()
     perception = WeChatPerception(config, tree=tree, driver=driver, window=window)  # type: ignore[arg-type]
+
+    if args.rehearse:
+        import cv2
+
+        from vrpa.vision.screen import AutoScreenSource
+
+        perception.activate()
+        perception.switch_session(args.chat)
+        rect = tree.locate("input_box")
+        driver.click(*rect.center)
+        time.sleep(0.25)
+        driver.click(*rect.center)
+        time.sleep(0.25)
+        driver.hotkey("ctrl", "a")
+        driver.clipboard_set(args.text)
+        driver.hotkey("ctrl", "v")
+        time.sleep(0.5)
+        stamp = time.strftime("%Y%m%d_%H%M%S")
+        path = f"data/reports/send_rehearsal_{stamp}.png"
+        cv2.imwrite(path, AutoScreenSource().capture())
+        driver.hotkey("ctrl", "a")
+        driver.hotkey("delete")
+        payload = {"ok": True, "stage": "rehearsal", "chat": args.chat, "diagnostic": path}
+        print(json.dumps(payload, ensure_ascii=False, indent=2) if args.json else f"REHEARSAL OK: {path}")
+        return 0
 
     def _capture_after_send(session: str) -> str:
         last = ""
@@ -136,6 +162,9 @@ def run_send(argv: Sequence[str]) -> int:
     from wechat_agent.core.config import load_config
 
     config = load_config(args.config)
+    if args.rehearse and not args.real:
+        print("REHEARSAL REFUSED: --rehearse 必须与 --real 一起使用（演练不会发送）", file=sys.stderr)
+        return 2
     if args.real:
         return _run_real(args, config)
 
