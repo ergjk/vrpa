@@ -40,6 +40,8 @@ function Invoke-PythonProcess {
     $psi.RedirectStandardError = $true
     $psi.StandardOutputEncoding = [System.Text.Encoding]::UTF8
     $psi.StandardErrorEncoding = [System.Text.Encoding]::UTF8
+    $psi.EnvironmentVariables["PYTHONIOENCODING"] = "utf-8"
+    $psi.EnvironmentVariables["PYTHONUTF8"] = "1"
     $proc = New-Object System.Diagnostics.Process
     $proc.StartInfo = $psi
     [void]$proc.Start()
@@ -109,6 +111,10 @@ for ($i = 1; $i -le $Iterations; $i++) {
     }
     catch {
         Write-Host ("[{0}] JSON 解析失败：{1}" -f $i, $_.Exception.Message) -ForegroundColor Red
+        if ($proc.StdErr) {
+            $tail = $proc.StdErr.Substring([Math]::Max(0, $proc.StdErr.Length - 800))
+            Write-Host "stderr 尾部：$tail" -ForegroundColor DarkYellow
+        }
         $failed = $true
         break
     }

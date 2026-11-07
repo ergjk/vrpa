@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import os
+import contextlib
 import sys
 import traceback
 from collections.abc import Callable, Sequence
@@ -266,9 +267,20 @@ def _print_failure(exc: AgentFrameworkError) -> None:
         print("".join(traceback.format_exception(type(cause), cause, cause.__traceback__)), file=sys.stderr)
 
 
+def _configure_stdio() -> None:
+    """Windows 控制台默认 GBK；统一为 UTF-8，避免中文/emoji 回复打印失败。"""
+    for name in ("stdout", "stderr"):
+        stream = getattr(sys, name, None)
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            with contextlib.suppress(ValueError, OSError):
+                reconfigure(encoding="utf-8", errors="replace")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     from vrpa.vision.dpi import enable_dpi_awareness
 
+    _configure_stdio()
     enable_dpi_awareness()
     """进程主入口；把异常统一映射为退出码，绝不抛裸堆栈。"""
     args = list(sys.argv[1:] if argv is None else argv)
