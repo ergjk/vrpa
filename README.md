@@ -1,7 +1,7 @@
 # VRPA-WeChat-Agent
 
 > **VRPA（Vision RPA）通用 RPA 框架底座 + 微信参考实现** · MIT License
-> 状态：**M0 ~ M6 全部阶段已完成，真机联调进行中**（微信 4.x / Windows；546 项测试全绿 · 覆盖率 86.53% · ruff / mypy strict 全绿 · 默认 `dry_run`）
+> 状态：**M0 ~ M6 全部阶段已完成，真机联调进行中**（微信 4.x / Windows；551 项测试全绿 · 覆盖率 86.28% · ruff / mypy strict 全绿 · 默认 `dry_run`）
 > M4：队列/拟人延迟/限流/状态机熔断/`--simulate`/接管；M5：OpenAI 兼容客户端（重试+用量）、Prompt 预算裁剪、后处理安全过滤、人设热加载、`llm-ping`。
 
 ---
@@ -100,7 +100,7 @@ vrpa/                     # 通用框架底座（可独立发布/复用）
   ports.py                #   五端口协议 + 跨层 DTO（M0-F-04）
   platform.py             #   PlatformAdapter 协议 + AdapterRegistry（M0-F-04）
   testing/                #   Fakes + contracts 合规测试套件（M0-F-04）
-tests/                    # 546 项测试（配置/日志/异常/接口/双库/CLI/端口/契约/兼容 shim）
+tests/                    # 551 项测试（配置/日志/异常/接口/双库/CLI/端口/契约/兼容 shim）
 docs/                     # 技术方案、行动清单、架构、ADR、适配器指南
 scripts/quality.ps1|.bat  # 一键质量门禁（ruff + mypy strict + pytest + coverage）
 scripts/mouse_record.py   # 真机调试：记录手动拖选鼠标轨迹（用于校准 capture.drag）
@@ -209,7 +209,7 @@ python -m wechat_agent calibrate --import ./share/wechat-1280x720@1      # 导�
 # 5) 真机联调说明
 python -m wechat_agent run --simulate --scenario <场景.json>  # Fake 全链路（不触发真实键鼠）
 # 真实 dry-run 已可用：采集→解析→去重入库→LLM→dry_run 三重校验→回写
-# 真实发送仍必须 dry_run=false + allow_real_send=true + 逐项验收。
+# 真实发送：send --real（默认关闭，需 dry_run=false + safety.allow_real_send=true + --i-understand-risk）
 ```
 
 > 首次真实发送前必须完成：M1 校准通过 + M2 采集验收 + M6 三重校验；`dry_run: true` 期间不会发出任何消息。
@@ -266,7 +266,7 @@ python -m wechat_agent run --simulate --scenario <场景.json>  # Fake 全链路
 
 ```powershell
 .\scripts\quality.bat          # 一键：ruff check → ruff format → mypy strict → pytest+coverage
-python -m pytest tests -q     # 单元测试（当前 546 passed）
+python -m pytest tests -q     # 单元测试（当前 551 passed）
 python -m mypy                # vrpa 框架包 strict
 ```
 
@@ -275,8 +275,8 @@ python -m mypy                # vrpa 框架包 strict
 | 静态检查 | ruff（E/F/I/UP/B/SIM） | 全绿 |
 | 格式 | ruff format | 全绿 |
 | 类型 | mypy strict（`vrpa`） | 0 error |
-| 测试 | pytest | 546 passed |
-| 覆盖率 | pytest-cov | 86.53%（门禁 ≥85%） |
+| 测试 | pytest | 551 passed |
+| 覆盖率 | pytest-cov | 86.28%（门禁 ≥85%） |
 | 一键 | `scripts\quality.bat` | `QUALITY GATE: PASS` |
 
 ---
@@ -368,7 +368,7 @@ python -m mypy                # vrpa 框架包 strict
 | 真实浸泡 + 真机验收清单逐项确认 | ⬜ 待做 |
 | 群聊身份映射与联调 | ⬜ 待做 |
 | GUI 托盘控制台 | ⬜ 待做 |
-| 真实发送开放（dry_run=false + allow_real_send） | ⬜ 未开始（需验收通过后灰度） |
+| 真实发送入口（`send --real`，默认关闭） | ✅ 已实现并有拒绝路径测试；尚未执行首条灰度 |
 | V1.1 / V1.2 | ⬜ 仅规划 |
 
 **当前位置**：M0~M6 代码全部完成；真机联调处于“单轮真实 dry-run 已验证、时序与去重边界已修正”的 checkpoint，下一步是切会话提速 / 多回复 / 浸泡与验收，尚未开放真实发送。

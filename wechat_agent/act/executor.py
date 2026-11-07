@@ -47,6 +47,7 @@ class WeChatExecutor:
         window: Any | None = None,
         driver: Any | None = None,
         capture: Any | None = None,
+        tree: Any | None = None,
         allow_real_send: bool = False,
         sleep: Any = time.sleep,
     ) -> None:
@@ -54,6 +55,7 @@ class WeChatExecutor:
         self._window = window
         self._driver = driver
         self._capture = capture
+        self._tree = tree
         self._allow_real_send = allow_real_send
         self._sleep = sleep
         self.checks: SendChecks | None = None
@@ -89,16 +91,27 @@ class WeChatExecutor:
             raise VerifyFailed(
                 "真实发送被安全开关拒绝：allow_real_send=False（dry_run=false 必须显式授权并完成真机验收）"
             )
-        if self._window is None or self._driver is None or self._capture is None:
-            raise VerifyFailed("目标校验失败：真实发送缺少 window/driver/capture 依赖")
+        if self._window is None or self._driver is None or self._capture is None or self._tree is None:
+            raise VerifyFailed("目标校验失败：真实发送缺少 window/driver/capture/tree 依赖")
         try:
             self._window.ensure_foreground()
+            input_rect = self._tree.locate("input_box")
         except Exception as exc:  # noqa: BLE001 - 统一转换为校验失败
             raise VerifyFailed(f"目标校验失败：{exc}") from exc
+        self._driver.click(*input_rect.center)
+        self._driver.hotkey("ctrl", "a")
         self._driver.clipboard_set(text)
         self._driver.hotkey("ctrl", "v")
+        self._sleep(0.2)
+        # 发送前回读输入框：Ctrl+A/Ctrl+C 后比对剪贴板
+        self._driver.hotkey("ctrl", "a")
+        self._driver.hotkey("ctrl", "c")
+        self._sleep(0.15)
+        pasted = str(self._driver.clipboard_get())
+        if pasted.strip() != text.strip():
+            raise VerifyFailed("回读校验失败：输入框内容与待发文本不一致")
         self._driver.hotkey("enter")
-        self._sleep(0.4)
+        self._sleep(0.6)
         observed = str(self._capture(session))
         if text.strip() not in observed:
             raise VerifyFailed(f"回读校验失败：发送后在会话 {session!r} 未观察到内容")

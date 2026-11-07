@@ -30,7 +30,8 @@
 - **红线 R3**：消息内容只允许通过“鼠标框选 + `Ctrl+C`”剪贴板采集，禁止对消息做图像识别；
 - **默认 `dry_run: true`**：`run --simulate` 与 `run --real` 默认都不真实发送；
 - **三重校验**：真实发送前必须通过内容、目标会话、回读校验；
-- **真实发送开关**：`dry_run=false` 与 `allow_real_send=true` 必须同时显式开启，且需真机验收；
+- **真实发送开关**：`dry_run=false` 与 `safety.allow_real_send=true` 必须同时显式开启，且需真机验收；
+- **真实发送命令**：仅 `send --real --i-understand-risk`，并限制在 `safety.real_send_allowlist` 会话；单次单条、失败不自动重发；
 - **敏感文件**：`.env`、`data/identity.toml`、`data/` 已被 `.gitignore` 忽略，不应提交；
 - **消息数据**：除用户配置的 LLM API 外，不上传聊天内容；记忆库保存在本地；
 - **测试隔离**：单元测试不读取仓库根 `.env`，不触发真实桌面操作或付费 LLM 调用。

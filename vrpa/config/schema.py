@@ -176,6 +176,8 @@ class SafetyConfig:
     sensitive_words: tuple[str, ...]
     max_reply_chars: int
     block_links: bool
+    allow_real_send: bool = False
+    real_send_allowlist: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -443,6 +445,8 @@ def parse_safety(raw: Mapping[str, Any]) -> SafetyConfig:
             "sensitive_words",
             "max_reply_chars",
             "block_links",
+            "allow_real_send",
+            "real_send_allowlist",
         ),
         "safety",
     )
@@ -456,6 +460,8 @@ def parse_safety(raw: Mapping[str, Any]) -> SafetyConfig:
         sensitive_words=_as_str_list(raw.get("sensitive_words"), "safety.sensitive_words"),
         max_reply_chars=_as_int(raw.get("max_reply_chars"), "safety.max_reply_chars", minimum=1, maximum=5000),
         block_links=_as_bool(raw.get("block_links"), "safety.block_links"),
+        allow_real_send=_as_bool(raw.get("allow_real_send", False), "safety.allow_real_send"),
+        real_send_allowlist=_as_str_list(raw.get("real_send_allowlist", []), "safety.real_send_allowlist"),
     )
 
 

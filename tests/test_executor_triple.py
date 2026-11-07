@@ -9,7 +9,7 @@ import pytest
 
 from vrpa.errors import VerifyFailed
 from vrpa.ports import Rect
-from vrpa.testing.fakes import FakeDriver, FakeWindowBackend
+from vrpa.testing.fakes import FakeDriver, FakeElementTree, FakeWindowBackend
 from vrpa.vision.window import WindowInfo
 from wechat_agent.act.executor import WeChatExecutor
 from wechat_agent.core.config import load_config
@@ -80,13 +80,14 @@ def test_real_send_three_checks_passed(tmp_path: Path) -> None:
         window=WeChatWindow(CFG, FakeWindowBackend(INFO, foreground=False)),
         driver=driver,
         capture=lambda _chat: "张三: 你好",
+        tree=FakeElementTree(element_rects={"input_box": Rect(10, 10, 100, 30)}),
         allow_real_send=True,
         sleep=lambda _s: None,
     )
     outcome = executor.send("张三", "你好", trigger="console")
     assert outcome.ok and outcome.stage == "sent"
     assert driver.clipboard_sets == ["你好"]
-    assert driver.hotkeys == [("ctrl", "v"), ("enter",)]
+    assert driver.hotkeys == [("ctrl", "a"), ("ctrl", "v"), ("ctrl", "a"), ("ctrl", "c"), ("enter",)]
     assert executor.checks is not None and executor.checks.passed
 
 
@@ -96,6 +97,7 @@ def test_real_send_verify_failure(tmp_path: Path) -> None:
         window=WeChatWindow(CFG, FakeWindowBackend(INFO)),
         driver=FakeDriver(),
         capture=lambda _chat: "别的消息",
+        tree=FakeElementTree(element_rects={"input_box": Rect(10, 10, 100, 30)}),
         allow_real_send=True,
         sleep=lambda _s: None,
     )

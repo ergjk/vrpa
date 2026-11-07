@@ -101,6 +101,8 @@ safety:
   sensitive_words: ["身份证", "密码", "转账"]
   max_reply_chars: 300
   block_links: true
+  allow_real_send: false        # 真实发送总开关（必须与 dry_run=false 同时开启；默认关闭）
+  real_send_allowlist: ["文件传输助手", "王衢665"]  # 首版只允许这些会话真实发送
 
 control:
   nlu_enabled: true              # 允许自然语言指令（需 LLM，M6）
