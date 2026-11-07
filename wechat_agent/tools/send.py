@@ -72,7 +72,13 @@ def _run_real(args: argparse.Namespace, config: object) -> int:
     tree = WeChatElementTree(config)  # type: ignore[arg-type]
     window = WeChatWindow(config)  # type: ignore[arg-type]
     driver = PyAutoGuiDriver()
-    perception = WeChatPerception(config, tree=tree, driver=driver, window=window)  # type: ignore[arg-type]
+    perception = WeChatPerception(
+        config,  # type: ignore[arg-type]
+        tree=tree,
+        driver=driver,
+        window=window,
+        verify_session_capture=False,
+    )
 
     if args.rehearse and args.manual_focus:
         import cv2

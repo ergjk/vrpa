@@ -85,6 +85,7 @@ class WeChatPerception:
         driver: Driver | None = None,
         window: WeChatWindow | None = None,
         sleep: Callable[[float], None] = time.sleep,
+        verify_session_capture: bool = True,
     ) -> None:
         self._config = config
         self._tree = tree if tree is not None else _build_default_tree(config)
@@ -97,7 +98,7 @@ class WeChatPerception:
             self._tree,
             self._driver,
             window=self._window,
-            capture=self.capture,
+            capture=self.capture if verify_session_capture else None,
             sleep=sleep,
         )
 

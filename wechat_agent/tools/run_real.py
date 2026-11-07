@@ -254,7 +254,7 @@ def run_real(args: Any) -> int:
             return getattr(self._inner, name)
 
     try:
-        perception = _CaptureRecorder(WeChatPerception(config))
+        perception = _CaptureRecorder(WeChatPerception(config, verify_session_capture=False))
         payload = execute_dry_run(
             config,
             perception=perception,
