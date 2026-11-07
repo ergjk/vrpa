@@ -213,10 +213,15 @@ def run_real(args: Any) -> int:
     from wechat_agent.tools.probe import _with_drag_override
 
     multi = bool(getattr(args, "multi", False))
-    drag_from = getattr(args, "drag_from", None) or ("0.02,0.01" if multi else None)
-    drag_to = getattr(args, "drag_to", None) or ("0.95,1.03" if multi else None)
+    history = bool(getattr(args, "history", False))
+    if history:
+        drag_from = getattr(args, "drag_from", None) or "0.06,0.98"
+        drag_to = getattr(args, "drag_to", None) or "0.90,-0.05"
+    else:
+        drag_from = getattr(args, "drag_from", None) or ("0.02,0.01" if multi else None)
+        drag_to = getattr(args, "drag_to", None) or ("0.95,1.03" if multi else None)
     drag_duration = getattr(args, "drag_duration", None)
-    if multi and drag_duration is None:
+    if (multi or history) and drag_duration is None:
         drag_duration = 1.4
     config = _with_drag_override(config, drag_from, drag_to, drag_duration)
     if not config.app.dry_run:

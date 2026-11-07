@@ -182,7 +182,8 @@ class WeChatPerception:
         # 仍失败则放弃（不再盲试多个起点，避免选中旧消息/浪费一轮时间）。
         multi_message = end[1] < start[1] or drag.from_y < 0 or drag.from_y > 1 or drag.to_y < 0 or drag.to_y > 1
         start_source = "config"
-        if multi_message:
+        downward = drag.to_y > drag.from_y
+        if multi_message and downward:
             # 优先使用显式校准的起点区；未校准时才用“文本框区 - 气泡头像区”补集。
             try:
                 start_area = self._tree.locate("drag_start_area")
@@ -226,7 +227,7 @@ class WeChatPerception:
         scroll_methods: list[str] = []
         self.last_capture_info = {
             "multi": multi_message,
-            "attempts": len(attempts),
+            "planned_attempts": len(attempts),
             "scroll_clicks": scroll_clicks,
             "scroll_count": 0,
             "scroll_methods": scroll_methods,
