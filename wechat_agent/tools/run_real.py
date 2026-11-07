@@ -14,7 +14,6 @@ import sys
 import time
 from collections.abc import Sequence
 from dataclasses import replace
-from pathlib import Path
 from typing import Any
 
 from vrpa.errors import AgentFrameworkError, ConfigError, CopyFailed
@@ -118,6 +117,7 @@ def execute_dry_run(
     force_llm: bool = False,
     settle: float = 0.0,
     sleep: Any = time.sleep,
+    history_mode: bool = False,
 ) -> dict[str, Any]:
     """跑一轮真实 dry-run，返回可审计结果（不发送真实消息）。"""
     if not config.app.dry_run:
@@ -176,12 +176,32 @@ def execute_dry_run(
             timing["settle_ms"] = round((time.perf_counter() - started) * 1000, 1)
         started = time.perf_counter()
         report = orchestrator.run([chat], max_ticks=max(1, int(ticks)))
+        failures = report.failures
+        events = list(report.events)
+        if history_mode:
+            print(
+                "HISTORY 模式为测试/诊断用途：历史窗口可能早于库尾，去重无法锚定时不会入库。",
+                file=sys.stderr,
+            )
+        else:
+            anomalies = [
+                tick
+                for tick in report.tick_results
+                if tick.captured > 0 and tick.ingested == 0 and tick.duplicates == 0
+            ]
+            if anomalies:
+                failures += len(anomalies)
+                events.append("dedup_unanchored")
+                print(
+                    f"DEDUP ERROR: {len(anomalies)} 个 tick 采集到文本但去重未锚定，已拒绝视为成功。",
+                    file=sys.stderr,
+                )
         timing["ticks_total_ms"] = round((time.perf_counter() - started) * 1000, 1)
         timing["capture_ms"] = round(sum(tick.phase_ms.get("capture_ms", 0.0) for tick in report.tick_results), 1)
         timing["ingest_ms"] = round(sum(tick.phase_ms.get("ingest_ms", 0.0) for tick in report.tick_results), 1)
         timing["reply_ms"] = round(sum(tick.phase_ms.get("reply_ms", 0.0) for tick in report.tick_results), 1)
         return {
-            "ok": report.failures == 0,
+            "ok": failures == 0,
             "mode": mode,
             "chat": chat,
             "ticks": report.ticks,
@@ -192,10 +212,11 @@ def execute_dry_run(
             "queued_left": report.queue_left,
             "replies": list(report.replies),
             "writes": history.count(chat) if history.get_chat(chat) else 0,
-            "failures": report.failures,
-            "events": list(report.events),
+            "failures": failures,
+            "events": events,
             "timing": timing,
             "dry_run": True,
+            "history_experimental": history_mode,
         }
     finally:
         memory_store.close()
@@ -255,6 +276,7 @@ def run_real(args: Any) -> int:
 
     try:
         perception = _CaptureRecorder(WeChatPerception(config, verify_session_capture=False))
+        history_mode = bool(getattr(args, "history", False))
         payload = execute_dry_run(
             config,
             perception=perception,
@@ -262,17 +284,13 @@ def run_real(args: Any) -> int:
             ticks=int(args.ticks or 1),
             force_llm=bool(getattr(args, "llm", False)),
             settle=float(getattr(args, "settle", 1.5)),
+            history_mode=history_mode,
         )
         capture_info = getattr(perception, "last_capture_info", None)
         if isinstance(capture_info, dict):
             payload["capture_info"] = capture_info
         payload["timing"]["warmup_ms"] = warmup_ms
         payload["timing"]["total_ms"] = round((time.perf_counter() - started_at) * 1000, 1)
-        if getattr(args, "dump", None):
-            dump_path = Path(str(args.dump))
-            dump_path.parent.mkdir(parents=True, exist_ok=True)
-            dump_path.write_text("\n\n---CAPTURE---\n\n".join(raw_sink), encoding="utf-8")
-            payload["dump"] = str(dump_path)
     except AgentFrameworkError as exc:
         print(f"DRY-RUN ERROR: {exc}", file=sys.stderr)
         return int(exc.exit_code)
