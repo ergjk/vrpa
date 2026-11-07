@@ -49,6 +49,7 @@ class Command:
 _COMMAND_SPECS = (
     ("selftest", "配置/日志/双库/依赖自检", "M0-02", int(ExitCode.USAGE)),
     ("doctor", "环境体检（依赖/DPI/多屏/窗口/写权限）", "M0-07", int(ExitCode.USAGE)),
+    ("first-run", "新用户首跑向导（环境/校准/Key/安全锁 + 下一条命令）", "M6-08", int(ExitCode.USAGE)),
     ("validate-tree", "校验假 UIA 树 profile 与锚点图", "M1-05", int(ExitCode.USAGE)),
     ("calibrate", "假 UIA 树校准向导（框选元素 + 锚点图 + 回验）", "M1-04", int(ExitCode.USAGE)),
     ("locate", "定位单个界面元素，打印坐标与匹配分数", "M1-03", int(ExitCode.ELEMENT_NOT_VISIBLE)),
@@ -189,6 +190,13 @@ def _cmd_acceptance(argv: Sequence[str]) -> int:
     return run_acceptance(argv)
 
 
+def _cmd_first_run(argv: Sequence[str]) -> int:
+    """M6-08：新用户首跑向导。"""
+    from wechat_agent.tools.first_run import run_first_run
+
+    return run_first_run(argv)
+
+
 def _cmd_gui(argv: Sequence[str]) -> int:
     """M6-07：Tkinter 控制台。"""
     from wechat_agent.tools.gui import run_gui
@@ -325,6 +333,7 @@ register_handler("report", _cmd_report)
 register_handler("soak", _cmd_soak)
 register_handler("acceptance", _cmd_acceptance)
 register_handler("gui", _cmd_gui)
+register_handler("first-run", _cmd_first_run)
 
 
 if __name__ == "__main__":

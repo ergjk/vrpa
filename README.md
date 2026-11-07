@@ -1,8 +1,83 @@
 # VRPA-WeChat-Agent
 
 > **VRPA（Vision RPA）通用 RPA 框架底座 + 微信参考实现** · MIT License
-> 状态：**M0 ~ M6 全部阶段已完成，真机联调进行中**（微信 4.x / Windows；578 项测试全绿 · 覆盖率 85.25% · ruff / mypy strict 全绿 · 默认 `dry_run`）
+> 状态：**V1.0 收口 checkpoint**（微信 4.x / Windows；588 项测试全绿 · 覆盖率 85.26% · ruff / mypy strict 全绿 · 默认 `dry_run` · 真实发送默认关闭）
 > M4：队列/拟人延迟/限流/状态机熔断/`--simulate`/接管；M5：OpenAI 兼容客户端（重试+用量）、Prompt 预算裁剪、后处理安全过滤、人设热加载、`llm-ping`。
+
+## 0. 10 分钟首跑（新用户先看）
+
+> 目标：先跑通 **dry-run**，不真实发送。不要一上来就开真实发送。
+
+### 0.1 前置
+
+- Windows 10/11，微信 PC **4.x**，Python **3.11+**（当前验证 3.14.7）；
+- dry-run 普通 PowerShell 可跑；**真实发送需要管理员 PowerShell**；
+- 微信窗口保持打开，分辨率/DPI 与校准 profile 一致。
+
+### 0.2 五步
+
+```powershell
+git clone https://github.com/ergjk/vrpa.git
+cd vrpa
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+copy .env.example .env
+notepad .env   # 填入 DEEPSEEK_API_KEY
+python -m wechat_agent first-run
+```
+
+按 `NEXT:` 提示补齐。最常见的两项：
+
+```powershell
+# 没有 profile 时：微信窗口打开后校准
+.\venv\Scripts\python.exe -m wechat_agent calibrate --warmup 10 --elements main_window,chat_title,search_box,message_area,input_box,send_button
+
+# 补齐后重新检查，直到 RESULT: READY
+.\venv\Scripts\python.exe -m wechat_agent first-run
+```
+
+`READY` 后：
+
+```powershell
+# 先离线模拟（不触发微信）
+.\venv\Scripts\python.exe -m wechat_agent run --simulate --scenario tests/fixtures/simulation/01_basic_flow.json
+
+# 真机 dry-run：真实采集/入库/LLM，但不发送
+.\venv\Scripts\python.exe -m wechat_agent run --real --chat 目标会话 --warmup 8 --settle 3 --ticks 1 --json
+
+# 可选：打开 GUI 控制台
+.\venv\Scripts\python.exe -m wechat_agent gui
+```
+
+### 0.3 首跑成功标准
+
+- `first-run` 输出 `RESULT: READY`；
+- 模拟场景 `ok=true`；
+- 真机 dry-run `failures=0`，有采集/入库，且**没有任何真实发送**。
+
+### 0.4 真实发送先别做
+
+真实发送必须同时满足：
+
+1. `config.yaml` 的 `app.dry_run=false`；
+2. `safety.allow_real_send=true`；
+3. 目标会话在 `real_send_allowlist`；
+4. 显式 `--i-understand-risk`；
+5. 管理员 PowerShell；
+6. 设置 `--max-sends 1` 或单条 `send --real`。
+
+首跑只验证 dry-run；真实发送请按 [§6.1](#61-wechat-快速开始) 的灰度流程，先发 1 条、确认收到、再恢复双锁。
+
+### 0.5 卡住时按顺序看
+
+```powershell
+.\venv\Scripts\python.exe -m wechat_agent first-run --json
+.\venv\Scripts\python.exe -m wechat_agent doctor
+.\venv\Scripts\python.exe -m wechat_agent report
+```
+
+日志：`data/logs/agent.log`；报告：`data/reports/`。
 
 ---
 
@@ -70,10 +145,10 @@
 | 假 UIA 树视觉定位 | 微信 4.x 无原生控件树，自建 JSON 元素树 + 锚点图匹配定位点击目标（只服务"操作界面"） | 已实现 M1-01~06（calibrate / validate-tree / locate 可用） |
 | 剪贴板纯文本采集 | 消息流**唯一**来源：鼠标框选 + `Ctrl+C`，禁止对消息做图像识别（红线 R3） | 已实现 M2-01~06；微信 4.x 三段式格式已适配（`wechat_block`） |
 | 状态回写去重 | 发送后立即以 `assistant` 写库；下轮抓屏按文本哈希去重；无前缀消息识别为主人多端发送，入库不回复 | 已实现 M3-01~07（去重/多端/回写/档案/job/回放） |
-| LLM 推理 | Persona + 长期记忆 + 最近 N 轮上下文，Token 预算裁剪、输出清洗与安全过滤 | 规划中 M5 |
-| 发送三重校验 | 会话 / 焦点 / 内容三校验通过才回车；失败清空重试，绝不重发 | 规划中 M6 |
-| HITL 控制台 | 暂停/恢复、人设热更新、记忆查询、`/say` 接管、急停热键 | 规划中 M6 |
-| 可插拔插件 | 插件协议 + `#发圈` 示例（默认关闭） | 规划中 M6 |
+| LLM 推理 | Persona + 长期记忆 + 最近 N 轮上下文，Token 预算裁剪、输出清洗与安全过滤 | 已实现 M5 |
+| 发送三重校验 | 会话 / 焦点 / 内容三校验通过才回车；失败清空重试，绝不重发 | 已实现 M6（真实发送默认关闭） |
+| HITL 控制台 | 状态、dry-run 启停、真实发送锁定、日志；暂停/托盘待后续 | 已实现 M6-02 / M6-07（首版） |
+| 可插拔插件 | 插件协议 + `#发圈` 示例（默认关闭） | 已实现 M6-04 |
 | 微信适配器装配 | `WeChatAdapter` 实现 `PlatformAdapter` 并注册到 `ADAPTER_REGISTRY`；`create_ports()` 组装记忆 / 元素树 / 感知 / 执行 / 推理五端口（记忆已可用，其余按 M1/M2/M5/M6 就绪） | 已实现 M0-F-05 |
 
 ---
@@ -100,7 +175,7 @@ vrpa/                     # 通用框架底座（可独立发布/复用）
   ports.py                #   五端口协议 + 跨层 DTO（M0-F-04）
   platform.py             #   PlatformAdapter 协议 + AdapterRegistry（M0-F-04）
   testing/                #   Fakes + contracts 合规测试套件（M0-F-04）
-tests/                    # 578 项测试（配置/日志/异常/接口/双库/CLI/端口/契约/兼容 shim）
+tests/                    # 588 项测试（配置/日志/异常/接口/双库/CLI/端口/契约/兼容 shim）
 docs/                     # 技术方案、行动清单、架构、ADR、适配器指南
 scripts/quality.ps1|.bat  # 一键质量门禁（ruff + mypy strict + pytest + coverage）
 scripts/mouse_record.py   # 真机调试：记录手动拖选鼠标轨迹（用于校准 capture.drag）
@@ -192,7 +267,10 @@ python -m wechat_agent probe --text 样例.txt --json    # 离线解析诊断
 python -m wechat_agent replay --scenario tests/fixtures/dedup_scenarios/01_basic_overlap.json  # 去重回放
 python -m wechat_agent run --simulate --scenario tests/fixtures/simulation/01_basic_flow.json   # 全链路 dry-run 模拟
 python -m wechat_agent run --real --chat 目标会话 --warmup 8 --settle 3 --json  # 真机 dry-run（真实采集/入库/LLM，不真实发送）
-python -m wechat_agent run --real --chat 目标会话 --warmup 8 --settle 3 --multi --json  # 多条采集：先回底→头像列顶部向下越界框选（覆盖头像/气泡区）
+python -m wechat_agent run --real --chat 目标会话 --warmup 8 --settle 3 --multi --json  # 多条采集：中心起点→终点越界自动滚动（不要先回底）
+python -m wechat_agent run --real --chat 目标会话 --warmup 8 --settle 3 --history --json  # 历史诊断：底部中心→向上越界自动滚动（测试用，不保证入库）
+python -m wechat_agent first-run  # 新用户首跑向导
+python -m wechat_agent gui        # Tkinter 控制台
 scripts\soak_real.bat -Iterations 20 -IntervalSeconds 20  # 真机浸泡（管理员；不真实发送；日志在 data/soak_real/）
 # run --real 输出 timing（warmup/activate/switch_session/capture/ingest/reply/ticks/total 毫秒）
 python -m wechat_agent llm-ping                # LLM 连通性（需 DEEPSEEK_API_KEY）
@@ -259,7 +337,7 @@ python -m wechat_agent run --simulate --scenario <场景.json>  # Fake 全链路
 - **Python**：3.10+（当前验证：3.14.7；3.11/3.12 为兼容性推荐）
 - **微信**：PC 版 **4.x**（假 UIA 树按该版本校准）
 - **核心依赖**：`pyautogui` / `pywinauto` / `pyperclip`（RPA）、`opencv-python` + `numpy` + `Pillow`（锚点匹配）、`openai`（LLM）、`PyYAML`（配置）、`pytest`（测试）
-- **权限**：普通用户即可；不要求管理员、不装驱动、不注入进程
+- **权限**：dry-run 普通用户即可；真实发送需要**管理员 PowerShell**（否则合成输入可能被系统丢弃）
 
 ---
 
@@ -267,7 +345,7 @@ python -m wechat_agent run --simulate --scenario <场景.json>  # Fake 全链路
 
 ```powershell
 .\scripts\quality.bat          # 一键：ruff check → ruff format → mypy strict → pytest+coverage
-python -m pytest tests -q     # 单元测试（当前 578 passed）
+python -m pytest tests -q     # 单元测试（当前 588 passed）
 python -m mypy                # vrpa 框架包 strict
 ```
 
@@ -276,8 +354,8 @@ python -m mypy                # vrpa 框架包 strict
 | 静态检查 | ruff（E/F/I/UP/B/SIM） | 全绿 |
 | 格式 | ruff format | 全绿 |
 | 类型 | mypy strict（`vrpa`） | 0 error |
-| 测试 | pytest | 578 passed |
-| 覆盖率 | pytest-cov | 85.25%（门禁 ≥85%） |
+| 测试 | pytest | 588 passed |
+| 覆盖率 | pytest-cov | 85.26%（门禁 ≥85%） |
 | 一键 | `scripts\quality.bat` | `QUALITY GATE: PASS` |
 
 ---
@@ -321,7 +399,7 @@ python -m mypy                # vrpa 框架包 strict
 
 ## 11. 局限性与安全声明
 
-1. **独占限制**：RPA 运行期间抢占鼠标键盘；建议副屏/虚拟机隔离运行，并提供全局急停热键与暂停指令。
+1. **独占限制**：RPA 运行期间抢占鼠标键盘；建议副屏/虚拟机隔离运行。当前首版 GUI 只有停止/紧急停止，暂停与系统托盘待后续，运行中不要操作 GUI。
 2. **分辨率 / 主题依赖**：元素定位依赖锚点图；窗口大小、DPI 缩放、深色/浅色主题变化后需重新校准。校准失效时系统**中止动作而非猜测**（表现为"暂时不回复"）。
 3. **富文本局限**：只处理纯文本，不解析图片 / 语音 / 视频 / 复杂富文本。
 4. **平台突变**：客户端大版本更新可能导致 UI 不可匹配，需重录锚点图或升级适配器。
@@ -362,18 +440,18 @@ python -m mypy                # vrpa 框架包 strict
 | M3 去重对齐与记忆提炼 | ✅ 已完成（新增跳过窗口外尾部消息） |
 | M4 编排调度与 dry-run 全链路 | ✅ 已完成 |
 | M5 LLM 推理层与 Prompt 预算 | ✅ 已完成 |
-| M6 执行层/控制台/插件/报告/验收清单 | ✅ 已完成（真实发送未开放） |
-| **真机联调（当前）** | 🚧 单轮真实 dry-run 已通过：采集 4/5 条、去重、入库、LLM 回复、dry_run 回写、timing 全绿 |
-| 切会话提速（验证采集合并/去掉重复采集） | ⬜ 待做 |
+| M6 执行层/控制台/插件/报告/验收清单 | ✅ 已完成（真实发送默认关闭，灰度入口可用） |
+| **真机联调（当前）** | ✅ 单轮 dry-run、受控 live（`max-sends 1`）、GUI 首版均已通过 |
+| 切会话提速（验证采集合并/去掉重复采集） | ✅ 已关闭重复采集校验 |
 | 多回复/队列消化（`--max-replies` 或 ticks） | ⬜ 待做 |
-| 真实浸泡 + 真机验收清单逐项确认 | ⬜ 待做 |
+| 真实浸泡 + 真机验收清单逐项确认 | 🚧 单轮已过，多轮 soak 待做 |
 | 群聊身份映射与联调 | ⬜ 待做 |
-| GUI 托盘控制台 | ⬜ 待做 |
+| GUI 控制台 | ✅ Tkinter 首版；系统托盘/暂停恢复待后续 |
 | 真实发送入口（`send --real`，默认关闭） | ✅ 两条灰度已通过：`message_id=86`（手动聚焦）、`87`（自动直接粘贴 + 静态输入区）；默认仍关闭 |
 | 受控真实发送循环（`run --live`，默认关闭） | ✅ 首轮实跑通过：`--max-sends 1`、`sent_count=1`、`message_id=100`；失败即停，默认仍关闭 |
 | V1.1 / V1.2 | ⬜ 仅规划 |
 
-**当前位置**：M0~M6 代码全部完成；真机联调处于“单轮真实 dry-run 已验证、时序与去重边界已修正”的 checkpoint，下一步是切会话提速 / 多回复 / 浸泡与验收，尚未开放真实发送。
+**当前位置**：V1.0 收口 checkpoint；真实发送默认关闭，仅保留受控灰度入口；下一步是采集稳定性、live 多轮 soak、GUI 托盘/暂停恢复。
 
 ## 14. AI 生成声明（AI-Generated Declaration）
 
