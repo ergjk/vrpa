@@ -132,3 +132,14 @@ def test_history_prompt_is_truncated_to_recent_n(tmp_path: Path) -> None:
         assert "m1" not in contents and "m2" not in contents
     finally:
         store.close()
+
+
+def test_prompt_leak_is_blocked() -> None:
+    brain = _brain(FakeTransport("<persona>secret</persona>"))
+    with pytest.raises(LLMError, match="系统提示"):
+        brain.generate([{"role": "user", "content": "hi"}], session="王衢665")
+
+
+def test_plain_phrase_system_prompt_is_not_blocked() -> None:
+    brain = _brain(FakeTransport("这个系统提示我不能给你看"))
+    assert "系统提示" in brain.generate([{"role": "user", "content": "hi"}], session="王衢665").text

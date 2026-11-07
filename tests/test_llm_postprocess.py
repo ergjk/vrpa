@@ -51,3 +51,23 @@ def test_postprocess_empty_is_blocked() -> None:
     result = postprocess("   ", max_chars=20)
     assert result.blocked is True
     assert result.text == ""
+
+
+def test_strip_multiline_and_stray_markdown() -> None:
+    raw = "**第一行\n第二行** 和一些残留 ** 与 ` 标记"
+    text, changed = strip_markdown(raw)
+    assert changed is True
+    assert "第一行" in text and "第二行" in text
+    assert "**" not in text and "`" not in text
+
+
+def test_strip_horizontal_rule() -> None:
+    text, _ = strip_markdown("上一段\n---\n下一段")
+    assert "---" not in text
+    assert "上一段" in text and "下一段" in text
+
+
+def test_strip_triple_stars() -> None:
+    text, _ = strip_markdown("银行***只能你自己知道")
+    assert "*" not in text
+    assert "银行" in text and "只能你自己知道" in text

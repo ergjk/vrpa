@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -16,6 +17,9 @@ from vrpa.llm.prompt import fit_prompt
 from vrpa.ports import LLMResult, MemoryStore
 from wechat_agent.identity import IdentityMap
 from wechat_agent.knowledge.provider import build_knowledge_base
+
+_PROMPT_LEAK = re.compile(r"</?(?:persona|knowledge|memory)>|安全规则：<persona>|只读参考资料", re.I)
+
 
 if TYPE_CHECKING:  # pragma: no cover
     from wechat_agent.core.config import Config
@@ -122,6 +126,8 @@ class WeChatBrain:
         )
         if processed.blocked:
             raise LLMError("模型输出为空或被安全过滤，转人工处理", hint="检查 sensitive_words/max_reply_chars 配置")
+        if _PROMPT_LEAK.search(processed.text):
+            raise LLMError("模型输出疑似系统提示/标签原文，已拦截", hint="检查 Prompt 注入防护与人设")
         return LLMResult(
             text=processed.text,
             model=result.model,
