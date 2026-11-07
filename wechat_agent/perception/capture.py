@@ -182,25 +182,25 @@ class WeChatPerception:
         multi_message = end[1] < start[1] or drag.from_y < 0 or drag.from_y > 1 or drag.to_y < 0 or drag.to_y > 1
         start_source = "config"
         if multi_message:
-            bubble_area = None
+            # 优先使用显式校准的起点区；未校准时才用“文本框区 - 气泡头像区”补集。
             try:
-                bubble_area = self._tree.locate("bubble_avatar_area")
+                start_area = self._tree.locate("drag_start_area")
             except (ElementNotVisible, TreeConfigError):
+                start_area = None
+            if start_area is not None:
+                start = (start_area.center[0], start_area.y + 2)
+                start_source = "drag_start_area"
+            else:
                 bubble_area = None
-            if bubble_area is not None:
-                computed = _start_outside_bubble(area, bubble_area)
-                if computed is not None:
-                    start = computed
-                    start_source = "message_area-bubble_avatar_area"
-            if start_source == "config":
                 try:
-                    start_area = self._tree.locate("drag_start_area")
+                    bubble_area = self._tree.locate("bubble_avatar_area")
                 except (ElementNotVisible, TreeConfigError):
-                    start_area = None
-                if start_area is not None:
-                    # 显式起点区：顶部中点
-                    start = (start_area.center[0], start_area.y + 2)
-                    start_source = "drag_start_area"
+                    bubble_area = None
+                if bubble_area is not None:
+                    computed = _start_outside_bubble(area, bubble_area)
+                    if computed is not None:
+                        start = computed
+                        start_source = "message_area-bubble_avatar_area"
         retry_start = (
             area.x + int(round(area.width * _RETRY_DRAG_PLAN[0][0])),
             area.y + int(round(area.height * _RETRY_DRAG_PLAN[0][1])),
@@ -223,6 +223,7 @@ class WeChatPerception:
             "scroll_count": 0,
             "scroll_methods": scroll_methods,
             "start_source": start_source,
+            "start_point": start,
         }
 
         def _reset_to_bottom() -> None:

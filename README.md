@@ -183,7 +183,8 @@ python -m wechat_agent db-check
 
 # 4) 视觉校准与自检（微信 4.x）
 python -m wechat_agent calibrate --warmup 10 --elements main_window,chat_title,search_box,message_area,input_box,send_button
-python -m wechat_agent calibrate --append --warmup 10 --elements bubble_avatar_area  # 追加气泡-头像区，用于求起点区补集
+python -m wechat_agent calibrate --append --warmup 10 --elements drag_start_area  # 追加鼠标起点区（优先使用）
+python -m wechat_agent calibrate --append --warmup 10 --elements bubble_avatar_area  # 可选：追加气泡-头像区求补集
 python -m wechat_agent validate-tree --strict          # 现场自检（真实截屏）
 python -m wechat_agent locate input_box --json         # 打印坐标/分数/缩放
 python -m wechat_agent probe --chat 目标会话 --warmup 5 --debug --dump data/probe_raw.txt  # 真实采集诊断（只读，不落库不回复）
