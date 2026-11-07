@@ -1,7 +1,7 @@
 # VRPA-WeChat-Agent
 
 > **VRPA（Vision RPA）通用 RPA 框架底座 + 微信参考实现** · MIT License
-> 状态：**V1.0 收口 checkpoint**（微信 4.x / Windows；595 项测试全绿 · 覆盖率约 85% · ruff / mypy strict 全绿 · 默认 `dry_run` · 真实发送默认关闭）
+> 状态：**V1.0 收口 checkpoint**（微信 4.x / Windows；595 项测试全绿 · 覆盖率 85.09% · ruff / mypy strict 全绿 · 默认 `dry_run` · 真实发送默认关闭）
 > M4：队列/拟人延迟/限流/状态机熔断/`--simulate`/接管；M5：OpenAI 兼容客户端（重试+用量）、Prompt 预算裁剪、后处理安全过滤、人设热加载、`llm-ping`。
 
 ## 0. 10 分钟首跑（新用户先看）
@@ -70,6 +70,7 @@ python -m wechat_agent first-run
 首跑只验证 dry-run；真实发送请按 [§6.1](#61-wechat-快速开始) 的灰度流程，先发 1 条、确认收到、再恢复双锁。
 
 GUI 的“临时解锁并发送 1 条”会在系统临时目录生成一次性配置，进程结束立即删除；主 `config.yaml` 始终保持双锁。发送结束会弹出“是否收到”确认，失败统一显示 `NEXT:` 动作。
+2026-11-07 实测：`message_id=103` 发送成功，临时配置清理后主配置仍为 `dry_run=true / allow_real_send=false`。
 
 ### 0.5 卡住时按顺序看
 
@@ -208,7 +209,7 @@ wechat_agent/             # 微信参考实现（六层模块见 §5.1）
 | 记忆层 | SQLite 双库 + 去重对齐 | 流水去重、长期记忆提炼与召回 | 已实现 M3（HistoryStore / 尾部对齐 / LongTermMemory / 异步 job） |
 | 推理层 | DeepSeek / OpenAI 兼容 API | 上下文组装、回复生成与清洗 | 已实现 M5（客户端/预算/后处理/人设热加载/llm-ping） |
 | 执行层 | `pyautogui` + 三重校验 | 粘贴、校验、回车、状态回写 | 已实现 M6-01（内容/目标/回读三重校验；默认 dry_run，真实发送需显式授权 + 真机验收） |
-| 控制层 | CLI + Tkinter 控制台 | 暂停/恢复、状态、dry-run 启动停止、真实发送锁定 | 已实现 M6-02 CLI 与 M6-07 GUI 控制台（首版支持启动/停止/紧急停止；托盘待后续） |
+| 控制层 | CLI + Tkinter 控制台 | 状态、dry-run 启停、临时解锁发送、失败 NEXT、紧急停止 | 已实现 M6-02 CLI 与 M6-07 GUI（临时解锁灰度已通过 `message_id=103`；托盘/暂停待后续） |
 | 扩展层 | 插件协议 + Task Scheduler | `#发圈` 等 RPA 指令 | 已实现 M6-04（Plugin 协议 + 故障隔离 + moments 示例）；Task Scheduler 待后续 |
 
 ### 5.2 感知层规范：假 UIA 树（微信适配器实现要点）
@@ -357,7 +358,7 @@ python -m mypy                # vrpa 框架包 strict
 | 格式 | ruff format | 全绿 |
 | 类型 | mypy strict（`vrpa`） | 0 error |
 | 测试 | pytest | 595 passed |
-| 覆盖率 | pytest-cov | 85.27%（门禁 ≥85%） |
+| 覆盖率 | pytest-cov | 85.09%（门禁 ≥85%） |
 | 一键 | `scripts\quality.bat` | `QUALITY GATE: PASS` |
 
 ---
@@ -451,6 +452,7 @@ python -m mypy                # vrpa 框架包 strict
 | GUI 控制台 | ✅ Tkinter 首版；系统托盘/暂停恢复待后续 |
 | 真实发送入口（`send --real`，默认关闭） | ✅ 两条灰度已通过：`message_id=86`（手动聚焦）、`87`（自动直接粘贴 + 静态输入区）；默认仍关闭 |
 | 受控真实发送循环（`run --live`，默认关闭） | ✅ 首轮实跑通过：`--max-sends 1`、`sent_count=1`、`message_id=100`；失败即停，默认仍关闭 |
+| GUI 临时解锁发送 | ✅ 已通过：`live 1 条`、`message_id=103`；结束自动删除临时配置并弹窗确认收到 |
 | V1.1 / V1.2 | ⬜ 仅规划 |
 
 **当前位置**：V1.0 收口 checkpoint；真实发送默认关闭，仅保留受控灰度入口；下一步是采集稳定性、live 多轮 soak、GUI 托盘/暂停恢复。
