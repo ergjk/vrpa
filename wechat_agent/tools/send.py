@@ -144,6 +144,19 @@ def _run_real(args: argparse.Namespace, config: object) -> int:
             driver.hotkey("ctrl", "a")
             driver.hotkey("delete")
 
+        # 首选方案：不点击、直接粘贴（验证默认聚焦）
+        driver.hotkey("ctrl", "a")
+        driver.hotkey("delete")
+        driver.clipboard_set(args.text)
+        driver.hotkey("ctrl", "v")
+        time.sleep(0.5)
+        direct_shot = f"data/reports/send_rehearsal_{stamp}_direct.png"
+        cv2.imwrite(direct_shot, AutoScreenSource().capture())
+        results["direct_paste"] = read_input().strip() == args.text.strip()
+        shots["direct"] = direct_shot
+        driver.hotkey("ctrl", "a")
+        driver.hotkey("delete")
+
         for name, point in points.items():
             driver.click(*point)
             time.sleep(0.3)

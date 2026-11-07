@@ -102,23 +102,30 @@ class WeChatExecutor:
                 input_rect = self._tree.locate("input_box")
         except Exception as exc:  # noqa: BLE001 - 统一转换为校验失败
             raise VerifyFailed(f"目标校验失败：{exc}") from exc
+
+        def _paste_and_readback() -> bool:
+            self._driver.hotkey("ctrl", "a")
+            self._driver.clipboard_set(text)
+            self._driver.hotkey("ctrl", "v")
+            self._sleep(0.35)
+            self._driver.clipboard_set("__vrpa_input_check__")
+            self._driver.hotkey("ctrl", "a")
+            self._driver.hotkey("ctrl", "c")
+            self._sleep(0.2)
+            return str(self._driver.clipboard_get()).strip() == text.strip()
+
+        # 首选：不移动鼠标，直接粘贴（微信切回会话后输入框通常已聚焦）
+        # 仅当直接粘贴回读失败时，才点击输入框作为第二选项。
         if click_input:
             self._driver.click(*input_rect.center)
-            self._sleep(0.25)
+            self._sleep(0.3)
+        pasted = _paste_and_readback()
+        if not pasted and not click_input:
             self._driver.click(*input_rect.center)
-            self._sleep(0.25)
-        self._driver.hotkey("ctrl", "a")
-        self._driver.clipboard_set(text)
-        self._driver.hotkey("ctrl", "v")
-        self._sleep(0.35)
-        # 发送前回读输入框：先写哨兵，避免粘贴失败时旧剪贴板内容造成误判
-        self._driver.clipboard_set("__vrpa_input_check__")
-        self._driver.hotkey("ctrl", "a")
-        self._driver.hotkey("ctrl", "c")
-        self._sleep(0.2)
-        pasted = str(self._driver.clipboard_get())
-        if pasted.strip() != text.strip():
-            raise VerifyFailed("回读校验失败：输入框内容与待发文本不一致（可能未聚焦/未粘贴）")
+            self._sleep(0.3)
+            pasted = _paste_and_readback()
+        if not pasted:
+            raise VerifyFailed("回读校验失败：输入框内容与待发文本不一致（直接粘贴与点击兜底均失败）")
         # 取消 Ctrl+A 选区：否则 Enter 会用换行替换整段选中文本（不会发送）
         self._driver.hotkey("end")
         self._driver.hotkey("enter")
