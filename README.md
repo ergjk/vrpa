@@ -235,7 +235,7 @@ python -m wechat_agent run --simulate --scenario <场景.json>  # Fake 全链路
 **当前边界**
 
 - 消息流只支持**文本**（含 Unicode emoji 字符）；原生表情包/图片/语音/文件/引用回复不在 V1.0 范围（`text_only`，红线 R3 禁止图像识别）；
-- 真实 dry-run 已接为命令：`run --real --chat 会话 --warmup 8 --settle 3`（真实采集/入库/LLM，不真实发送；单次 `--ticks 1` 只处理 1 条回复，队列剩余属正常）；切会话每个操作间隔由 `capture.switch_delay`（默认 0.5s）控制；`--multi` 多条模式会先滚轮向下 + `PageDown`×5 + `Ctrl+End` 回底，并按 `message_area - (message_area ∩ bubble_avatar_area)` 求起点区后向下越界采集；采集后会对比“解析最新时间 vs 库内最新入向时间”，窗口陈旧则回底重采最多 3 次；终点按住停留 3/5 秒随机（普通模式 2~3s），输出 `capture_info`（planned_attempts/attempt_used/scroll 信息）；首次失败会回底并换轨迹重试一次；去重允许跳过库尾部不在本次窗口内的消息（如 dry-run 未发送的 out）；
+- 真实 dry-run 已接为命令：`run --real --chat 会话 --warmup 8 --settle 3`（真实采集/入库/LLM，不真实发送；单次 `--ticks 1` 只处理 1 条回复，队列剩余属正常）；切会话每个操作间隔由 `capture.switch_delay`（默认 0.5s）控制；`--multi` 多条模式会先滚轮向下 + `PageDown`×5 + `Ctrl+End` 回底，并按 `message_area - (message_area ∩ bubble_avatar_area)` 求起点区后向下越界采集；采集后会对比“解析最新时间 vs 库内最新入向时间”，窗口陈旧则回底重采最多 3 次；终点按住停留 3/5 秒随机（普通模式 2~3s），输出 `capture_info`（planned_attempts/attempt_used/start_point/end_point）；首次失败会回底并换轨迹重试一次；去重允许跳过库尾部不在本次窗口内的消息（如 dry-run 未发送的 out）；
 - 人手化拖拽/停留为 **V1.0 启发式**（时长、抖动、泊松停留），仅作节奏过渡；V1.2 计划用授权采样学习真人节奏（不记录消息内容）。
 
 ### 6.2 VRPA 适配器快速开始（QQ / 钉钉 / 其他平台）

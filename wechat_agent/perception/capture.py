@@ -178,49 +178,40 @@ class WeChatPerception:
             except CopyFailed:
                 previous = ""
 
-        # 真机规则：首次框选失败 -> 先把消息区滚到底部 -> 贴边由下往上重试一次；
-        # 仍失败则放弃（不再盲试多个起点，避免选中旧消息/浪费一轮时间）。
         multi_message = end[1] < start[1] or drag.from_y < 0 or drag.from_y > 1 or drag.to_y < 0 or drag.to_y > 1
-        start_source = "config"
         downward = drag.to_y > drag.from_y
-        if multi_message and downward:
-            # 优先使用显式校准的起点区；未校准时才用“文本框区 - 气泡头像区”补集。
+        start_source = "config"
+        if multi_message:
+            # 选区只由起点所在行和终点高度决定，横向无关：
+            # 多条目/历史统一使用同一条竖直线，起点与终点 x 对齐。
+            start_area = None
             try:
                 start_area = self._tree.locate("drag_start_area")
             except (ElementNotVisible, TreeConfigError):
                 start_area = None
-            if start_area is not None:
-                start = (start_area.center[0], start_area.y + 2)
-                start_source = "drag_start_area"
+            x = start_area.center[0] if start_area is not None else area.center[0]
+            if downward:
+                y = start_area.y + 2 if start_area is not None else area.y + 2
+                start_source = "drag_start_area" if start_area is not None else "multi_vertical"
             else:
-                bubble_area = None
-                try:
-                    bubble_area = self._tree.locate("bubble_avatar_area")
-                except (ElementNotVisible, TreeConfigError):
-                    bubble_area = None
-                if bubble_area is not None:
-                    computed = _start_outside_bubble(area, bubble_area)
-                    if computed is not None:
-                        start = computed
-                        start_source = "message_area-bubble_avatar_area"
-        if start_source != "config" and start[0] > area.center[0]:
-            # 起点在右侧空白带：终点改到左下越界，横跨消息文字
-            end = (
-                area.x + int(round(area.width * 0.04)),
-                area.y + int(round(area.height * 1.03)),
+                y = area.y + area.height - 2
+                start_source = "history_vertical"
+            start = (x, y)
+            end = (x, end[1])
+            # 多条目/历史只拖一次：失败直接报错，不再做对角线兜底。
+            attempts: list[tuple[tuple[int, int], tuple[int, int]]] = [(start, end)]
+        else:
+            retry_start = (
+                area.x + int(round(area.width * _RETRY_DRAG_PLAN[0][0])),
+                area.y + int(round(area.height * _RETRY_DRAG_PLAN[0][1])),
             )
-
-        retry_start = (
-            area.x + int(round(area.width * _RETRY_DRAG_PLAN[0][0])),
-            area.y + int(round(area.height * _RETRY_DRAG_PLAN[0][1])),
-        )
-        retry_end = (
-            area.x + int(round(area.width * _RETRY_DRAG_PLAN[1][0])),
-            area.y + int(round(area.height * _RETRY_DRAG_PLAN[1][1])),
-        )
-        attempts: list[tuple[tuple[int, int], tuple[int, int]]] = [(start, end)]
-        if (retry_start, retry_end) != (start, end):
-            attempts.append((retry_start, retry_end))
+            retry_end = (
+                area.x + int(round(area.width * _RETRY_DRAG_PLAN[1][0])),
+                area.y + int(round(area.height * _RETRY_DRAG_PLAN[1][1])),
+            )
+            attempts = [(start, end)]
+            if (retry_start, retry_end) != (start, end):
+                attempts.append((retry_start, retry_end))
 
         scroll_clicks = int(self._config.capture.scroll_to_bottom_clicks)
         scroll_count = 0

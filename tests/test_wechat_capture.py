@@ -208,7 +208,7 @@ def test_start_outside_bubble_uses_right_strip() -> None:
     assert _start_outside_bubble(text, Rect(100, 200, 400, 300)) is None
 
 
-def test_capture_uses_bubble_avatar_complement(tmp_path: Path) -> None:
+def test_multi_capture_uses_vertical_start(tmp_path: Path) -> None:
     cfg = _config(tmp_path)
     drag = dataclasses.replace(cfg.capture.drag, from_x=0.02, from_y=0.01, to_x=0.95, to_y=1.03)
     cfg = dataclasses.replace(cfg, capture=dataclasses.replace(cfg.capture, drag=drag))
@@ -229,5 +229,8 @@ def test_capture_uses_bubble_avatar_complement(tmp_path: Path) -> None:
         sleep=lambda _s: None,
     )
     assert perception.capture("测试会话") == CAPTURED
-    assert driver.drags[0][0] == (AREA.x + 100 + (AREA.width - 100) // 2, AREA.y + 2)
-    assert perception.last_capture_info["start_source"] == "message_area-bubble_avatar_area"
+    start_point, end_point, _steps, _duration = driver.drags[0]
+    assert start_point == (AREA.center[0], AREA.y + 2)
+    assert end_point[0] == start_point[0]  # 竖向拖拽，x 对齐
+    assert perception.last_capture_info["start_source"] == "multi_vertical"
+    assert perception.last_capture_info["planned_attempts"] == 1
