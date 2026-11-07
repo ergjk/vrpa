@@ -82,7 +82,7 @@ class WeChatExecutor:
         )
 
     # ------------------------------------------------------------ 发送
-    def send(self, session: str, text: str, *, trigger: str = "auto") -> SendOutcome:
+    def send(self, session: str, text: str, *, trigger: str = "auto", click_input: bool = True) -> SendOutcome:
         self.checks = self.validate(session, text)
         if self.checks.issues:
             raise VerifyFailed("内容校验失败：" + "；".join(self.checks.issues))
@@ -99,10 +99,11 @@ class WeChatExecutor:
             input_rect = self._tree.locate("input_box")
         except Exception as exc:  # noqa: BLE001 - 统一转换为校验失败
             raise VerifyFailed(f"目标校验失败：{exc}") from exc
-        self._driver.click(*input_rect.center)
-        self._sleep(0.25)
-        self._driver.click(*input_rect.center)
-        self._sleep(0.25)
+        if click_input:
+            self._driver.click(*input_rect.center)
+            self._sleep(0.25)
+            self._driver.click(*input_rect.center)
+            self._sleep(0.25)
         self._driver.hotkey("ctrl", "a")
         self._driver.clipboard_set(text)
         self._driver.hotkey("ctrl", "v")
