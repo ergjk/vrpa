@@ -16,7 +16,7 @@ from vrpa.memory.store import SQLiteMemoryStore
 from vrpa.scheduling.delay import Humanizer
 from vrpa.scheduling.loop import ControlChannel, Orchestrator
 from vrpa.scheduling.machine import CircuitBreaker, RunStateMachine
-from vrpa.scheduling.queue import MessageQueue
+from vrpa.scheduling.queue import MessageQueue, QueuedMessage
 from vrpa.scheduling.scheduler import Scheduler
 from vrpa.vision.driver import PyAutoGuiDriver
 from wechat_agent.act.executor import WeChatExecutor
@@ -25,6 +25,7 @@ from wechat_agent.core.next_action import explain_failure, explain_reason
 from wechat_agent.identity import load_identity
 from wechat_agent.memory.job_factory import build_memory_extract_job
 from wechat_agent.memory.pipeline import MessagePipeline
+from wechat_agent.memory.recovery import unanswered_incoming
 from wechat_agent.perception.capture import WeChatPerception
 from wechat_agent.perception.element_tree import WeChatElementTree
 from wechat_agent.perception.parser import WeChatParser
@@ -120,6 +121,7 @@ def run_live(args: Any) -> int:
             pre_send_delay=tuple(humanize.pre_send_delay),
             long_reply_extra=tuple(humanize.long_reply_extra),
         )
+        queue = MessageQueue()
         orchestrator = Orchestrator(
             config,
             perception=guarded,
@@ -129,7 +131,7 @@ def run_live(args: Any) -> int:
             executor=executor,
             humanizer=humanizer,
             scheduler=Scheduler(config.ratelimit),
-            queue=MessageQueue(),
+            queue=queue,
             machine=RunStateMachine(),
             breaker=CircuitBreaker(max_consecutive_failures=1),
             control=ControlChannel(),
@@ -137,6 +139,11 @@ def run_live(args: Any) -> int:
         )
         perception.activate()
         perception.switch_session(args.chat)
+        recovered = unanswered_incoming(history, args.chat, limit=max(5, max_sends * 2))
+        for record in recovered:
+            queue.push(QueuedMessage(chat=args.chat, content=record.content, message_id=record.id))
+        if recovered:
+            print(f"恢复未回复消息：{len(recovered)} 条", file=sys.stderr)
         orchestrator.start()
 
         sent: list[str] = []
@@ -170,6 +177,7 @@ def run_live(args: Any) -> int:
             "state": orchestrator.machine.state.value,
             "queue_left": len(orchestrator.queue),
             "events": events,
+            "recovered": len(recovered),
             "next_action": explain_reason(" ".join(events)).next_action if failures else "",
             "elapsed_ms": elapsed_ms,
         }

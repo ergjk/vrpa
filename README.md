@@ -1,7 +1,7 @@
 # VRPA-WeChat-Agent
 
 > **VRPA（Vision RPA）通用 RPA 框架底座 + 微信参考实现** · MIT License
-> 状态：**V1.0 收口 checkpoint**（微信 4.x / Windows；609 项测试全绿 · 覆盖率 85.07% · ruff / mypy strict 全绿 · 默认 `dry_run` · 真实发送默认关闭）
+> 状态：**V1.0 收口 checkpoint**（微信 4.x / Windows；612 项测试全绿 · 覆盖率 85.03% · ruff / mypy strict 全绿 · 默认 `dry_run` · 真实发送默认关闭）
 > M4：队列/拟人延迟/限流/状态机熔断/`--simulate`/接管；M5：OpenAI 兼容客户端（重试+用量）、Prompt 预算裁剪、后处理安全过滤、人设热加载、`llm-ping`。
 
 ## 0. 10 分钟首跑（新用户先看）
@@ -178,7 +178,7 @@ vrpa/                     # 通用框架底座（可独立发布/复用）
   ports.py                #   五端口协议 + 跨层 DTO（M0-F-04）
   platform.py             #   PlatformAdapter 协议 + AdapterRegistry（M0-F-04）
   testing/                #   Fakes + contracts 合规测试套件（M0-F-04）
-tests/                    # 609 项测试（配置/日志/异常/接口/双库/CLI/端口/契约/兼容 shim）
+tests/                    # 612 项测试（配置/日志/异常/接口/双库/CLI/端口/契约/兼容 shim）
 docs/                     # 技术方案、行动清单、架构、ADR、适配器指南
 scripts/quality.ps1|.bat  # 一键质量门禁（ruff + mypy strict + pytest + coverage）
 scripts/mouse_record.py   # 真机调试：记录手动拖选鼠标轨迹（用于校准 capture.drag）
@@ -386,7 +386,7 @@ python -m wechat_agent run --simulate --scenario <场景.json>  # Fake 全链路
 
 ```powershell
 .\scripts\quality.bat          # 一键：ruff check → ruff format → mypy strict → pytest+coverage
-python -m pytest tests -q     # 单元测试（当前 609 passed）
+python -m pytest tests -q     # 单元测试（当前 612 passed）
 python -m mypy                # vrpa 框架包 strict
 ```
 
@@ -395,8 +395,8 @@ python -m mypy                # vrpa 框架包 strict
 | 静态检查 | ruff（E/F/I/UP/B/SIM） | 全绿 |
 | 格式 | ruff format | 全绿 |
 | 类型 | mypy strict（`vrpa`） | 0 error |
-| 测试 | pytest | 609 passed |
-| 覆盖率 | pytest-cov | 85.07%（门禁 ≥85%） |
+| 测试 | pytest | 612 passed |
+| 覆盖率 | pytest-cov | 85.03%（门禁 ≥85%） |
 | 一键 | `scripts\quality.bat` | `QUALITY GATE: PASS` |
 
 ---
@@ -469,7 +469,7 @@ python -m mypy                # vrpa 框架包 strict
 
 ---
 
-> 项目治理：[SECURITY.md](SECURITY.md)（安全边界与私密报告） · [ADR 0005 远程控制边界](docs/ADR/0005-remote-control.md) · [V1.0 复盘](docs/RETROSPECTIVE_V1.0.md) · [CHANGELOG.md](CHANGELOG.md)（变更记录） · [CONTRIBUTING.md](CONTRIBUTING.md)（开发与提交规范） · [.github/labels.yml](.github/labels.yml)（标签定义）
+> 项目治理：[SECURITY.md](SECURITY.md)（安全边界与私密报告） · [真实环境压力测试方案](docs/STRESS_TEST_PLAN_V1.0.md) · [ADR 0005 远程控制边界](docs/ADR/0005-remote-control.md) · [V1.0 复盘](docs/RETROSPECTIVE_V1.0.md) · [CHANGELOG.md](CHANGELOG.md)（变更记录） · [CONTRIBUTING.md](CONTRIBUTING.md)（开发与提交规范） · [.github/labels.yml](.github/labels.yml)（标签定义）
 
 ## 13. 交付进度与当前联调位置
 
