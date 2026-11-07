@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import sys
 from collections.abc import Sequence
@@ -61,11 +62,17 @@ def _run_real(args: argparse.Namespace, config: object) -> int:
     window = WeChatWindow(config)  # type: ignore[arg-type]
     driver = PyAutoGuiDriver()
     perception = WeChatPerception(config, tree=tree, driver=driver, window=window)  # type: ignore[arg-type]
+
+    def _capture_after_send(session: str) -> str:
+        with contextlib.suppress(Exception):
+            perception.scroll_to_bottom()
+        return str(perception.capture(session))
+
     executor = WeChatExecutor(
         config,  # type: ignore[arg-type]
         window=window,
         driver=driver,
-        capture=perception.capture,
+        capture=_capture_after_send,
         tree=tree,
         allow_real_send=True,
     )

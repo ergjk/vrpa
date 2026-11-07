@@ -110,6 +110,8 @@ class WeChatExecutor:
         pasted = str(self._driver.clipboard_get())
         if pasted.strip() != text.strip():
             raise VerifyFailed("回读校验失败：输入框内容与待发文本不一致")
+        # 取消 Ctrl+A 选区：否则 Enter 会用换行替换整段选中文本（不会发送）
+        self._driver.hotkey("end")
         self._driver.hotkey("enter")
         self._sleep(0.6)
         observed = str(self._capture(session))

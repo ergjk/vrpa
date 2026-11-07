@@ -87,7 +87,7 @@ def test_real_send_three_checks_passed(tmp_path: Path) -> None:
     outcome = executor.send("张三", "你好", trigger="console")
     assert outcome.ok and outcome.stage == "sent"
     assert driver.clipboard_sets == ["你好"]
-    assert driver.hotkeys == [("ctrl", "a"), ("ctrl", "v"), ("ctrl", "a"), ("ctrl", "c"), ("enter",)]
+    assert driver.hotkeys == [("ctrl", "a"), ("ctrl", "v"), ("ctrl", "a"), ("ctrl", "c"), ("end",), ("enter",)]
     assert executor.checks is not None and executor.checks.passed
 
 

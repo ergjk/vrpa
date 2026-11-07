@@ -1,0 +1,115 @@
+﻿# ============================================================================
+# VRPA-WeChat-Agent 主配置（schema v2，M0-F-03）
+# 结构：通用段 + platform: {kind, options}
+#   - kind: 平台适配器类型，由 vrpa PlatformRegistry 解析
+#   - options: 平台私有字段，由对应插件校验（微信插件见 wechat_agent/config/wechat_schema.py）
+# 兼容：schema v1（顶层 wechat 段）会自动升级为 v2 并打印迁移提示
+# 自检：python -m wechat_agent selftest
+# ============================================================================
+schema: 2
+
+platform:
+  kind: wechat
+  options:
+    window_title_regex: "^(微信|WeChat)$"
+    process_names: ["WeChat.exe", "WeChatAppEx.exe", "Weixin.exe"]   # 4.x 客户端进程名为 Weixin.exe
+    activate_before_action: true
+    chat_type_default: private     # private | group
+    switch_chat: search_box        # search_box（推荐） | session_list
+
+app:
+  log_level: INFO                # DEBUG | INFO | WARNING | ERROR
+  data_dir: ./data               # 运行时目录（db / 锚点图 / 截图 / 日志 / 备份）
+  dry_run: false                  # true = 只采集与推理，不真实发送（首次运行必须为 true）
+  tick_interval: 2.0             # 主循环轮询间隔（秒）
+  max_hours: 8                   # 连续运行上限，超时自动暂停
+
+# —— 假 UIA 树（自定义视觉映射层，M1 核心）——
+uia_tree:
+  profile: auto                  # auto = "<分辨率>@<DPI>"，如 "2560x1440@1.25"
+  dir: ./data/uia_tree           # profile JSON 目录（默认模式）
+  anchors_dir: ./data/anchors    # 锚点图目录（按 profile 分子目录）
+  # 可选：使用别人分享的校准包（绝对路径，设置后优先于 dir/anchors_dir）
+  # profile_path: D:/shared/wechat/1280x720@1/profile.json
+  # anchors_root: D:/shared/wechat/1280x720@1/anchors
+  cache_ttl: 2.0                 # 定位结果缓存（秒）；任何界面动作后立即失效
+  match:
+    threshold: 0.88              # 低于此分视为「找不到」，禁止坐标兜底
+    scales: [0.9, 0.95, 1.0, 1.05, 1.1]
+    grayscale: true
+    max_side_px: 1600            # 匹配前降采样上限
+  locate_retries: 2              # 找不到 -> 立即中止本 tick 并重试
+  retry_wait: [0.4, 1.2]
+  allow_ratio_fallback: false    # 硬性 false：可点击元素必须有锚点图
+
+# —— 消息流采集（红线：唯一可读消息内容的路径）——
+capture:
+  switch_delay: 0.5             # 切会话时每个操作之间的间隔（秒）
+  scroll_to_bottom_clicks: 12   # 多条采集/失败重试时，先把消息区滚到底部
+  drag:
+    from: {x: 0.94, y: 0.14}     # 相对 message_area 元素的比例（避开滚动条/头像）
+    to: {x: 0.06, y: 0.92}
+    steps: 24                    # 分段移动步数（模拟人手）
+    duration: 0.9                # 拖拽总时长（秒；真机过快会选不中）
+    jitter_px: 6                 # 中间路径随机抖动像素
+    hold_before: 0.15            # 按下后停顿（秒）
+    hold_after: 0.0              # 已由程序按 0.3/0.6/0.9 泊松采样 ±0.1s（字段保留兼容）
+  copy_wait: 0.35                # Ctrl+C 后等待剪贴板稳定
+  min_messages: 3                # 一屏少于 3 条视为异常
+  lookback_screens: 3            # 失锚时向上回滚屏数
+  dedup_recent_window: 200       # 去重参考的库内最近条数
+  low_confidence_policy: ignore  # ignore | queue_confirm
+  title_verify: capture_first_sender   # capture_first_sender | search_text
+  restore_clipboard: true        # 采集后恢复主人原剪贴板
+
+llm:
+  provider: deepseek
+  base_url: https://api.deepseek.com
+  model: deepseek-chat
+  temperature: 1.15
+  max_tokens: 400
+  timeout: 25
+  retries: 3
+  history_turns: 12
+  max_prompt_tokens: 3000
+  memory_top_k: 6
+  fail_policy: hold              # hold（转人工） | skip
+  persona_path: ./personas/wechat.txt   # 人设文件（mtime 热加载）
+  prompt_trim_policy: history_first     # history_first | memory_first | knowledge_first
+                                        # 会话级覆盖：sessions/<chat_id>/prompt.json
+
+humanize:
+  perception_delay: [0.3, 1.2]
+  think_delay: [1.5, 5.0]
+  typing_ms_per_char: [35, 90]
+  pre_send_delay: [0.3, 1.4]
+  long_reply_extra: [1.0, 3.0]
+  jitter_enabled: true
+
+ratelimit:
+  per_chat_per_minute: 6
+  per_chat_per_day: 300
+  global_per_hour: 120
+  quiet_hours: ["01:00-07:30"]   # 静默时段只入库不回复
+  cooldown_after_send: [2, 5]
+
+safety:
+  panic_hotkey: "ctrl+alt+q"
+  pause_hotkey: "ctrl+alt+p"
+  max_consecutive_failures: 3
+  screenshot_on_failure: true
+  sensitive_words: ["身份证", "密码", "转账"]
+  max_reply_chars: 300
+  block_links: true
+  allow_real_send: true        # 真实发送总开关（必须与 dry_run=false 同时开启；默认关闭）
+  real_send_allowlist: ["王衢665"]  # 首版只允许这些会话真实发送
+
+control:
+  nlu_enabled: true              # 允许自然语言指令（需 LLM，M6）
+  confirm_override_send: true    # /say 前二次确认
+
+plugins:
+  moments:
+    enabled: false               # V1.0 默认关闭
+    default_visibility: private  # private | public | list
+
