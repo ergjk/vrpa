@@ -128,7 +128,6 @@ class PywinautoWindowBackend:
                 win32gui.SetForegroundWindow(hwnd)
             except Exception:  # noqa: BLE001 - 前台锁：AttachThreadInput 兜底
                 foreground = win32gui.GetForegroundWindow()
-                target_thread = win32process.GetWindowThreadProcessId(hwnd)[0]
                 foreground_thread = win32process.GetWindowThreadProcessId(foreground)[0]
                 current_thread = win32api.GetCurrentThreadId()
                 win32process.AttachThreadInput(current_thread, foreground_thread, True)
