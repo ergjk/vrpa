@@ -78,6 +78,7 @@ source = ["wechat_agent", "vrpa"]
 branch = true
 omit = [
   "*/__main__.py",
+  "wechat_agent/tools/gui.py",
 ]
 
 [tool.coverage.report]

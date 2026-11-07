@@ -62,6 +62,7 @@ _COMMAND_SPECS = (
     ("report", "运行报告（双库只读统计）", "M6-05", int(ExitCode.USAGE)),
     ("soak", "浸泡测试（--simulate，纯 Fake）", "M6-05", int(ExitCode.USAGE)),
     ("acceptance", "生成真机验收清单（只读）", "M6-06", int(ExitCode.USAGE)),
+    ("gui", "Tkinter 控制台（dry-run 启动/停止、状态、真实发送锁定）", "M6-07", int(ExitCode.USAGE)),
 )
 
 COMMANDS: dict[str, Command] = {
@@ -186,6 +187,13 @@ def _cmd_acceptance(argv: Sequence[str]) -> int:
     from wechat_agent.tools.acceptance import run_acceptance
 
     return run_acceptance(argv)
+
+
+def _cmd_gui(argv: Sequence[str]) -> int:
+    """M6-07：Tkinter 控制台。"""
+    from wechat_agent.tools.gui import run_gui
+
+    return run_gui(argv)
 
 
 def _cmd_llm_ping(argv: Sequence[str]) -> int:
@@ -316,6 +324,7 @@ register_handler("plugin", _cmd_plugin)
 register_handler("report", _cmd_report)
 register_handler("soak", _cmd_soak)
 register_handler("acceptance", _cmd_acceptance)
+register_handler("gui", _cmd_gui)
 
 
 if __name__ == "__main__":

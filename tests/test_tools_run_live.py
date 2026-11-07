@@ -247,3 +247,65 @@ def test_is_admin_returns_bool() -> None:
     from wechat_agent.tools.run_live import _is_admin
 
     assert isinstance(_is_admin(), bool)
+
+
+def test_is_admin_handles_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    import wechat_agent.tools.run_live as live_module
+
+    def raise_error() -> bool:
+        raise OSError("no shell32")
+
+    monkeypatch.setattr(live_module.ctypes.windll.shell32, "IsUserAnAdmin", raise_error)
+    assert live_module._is_admin() is False
+
+
+def test_live_capture_retry_exhausted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    import wechat_agent.tools.run_live as live_module
+
+    class _EmptyPerception:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            pass
+
+        def activate(self) -> None:
+            pass
+
+        def switch_session(self, chat: str) -> None:
+            pass
+
+        def capture(self, chat: str) -> str:
+            return ""
+
+        def scroll_to_bottom(self) -> None:
+            pass
+
+    class _Brain:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            pass
+
+    class _Executor:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            capture = kwargs.get("capture")
+            if callable(capture):
+                capture("测试")
+
+    class _Orch:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            self.machine = SimpleNamespace(state=SimpleNamespace(value="running"))
+            self.queue: list[object] = []
+
+        def start(self) -> None:
+            pass
+
+        def tick(self, chats: object) -> SimpleNamespace:
+            return SimpleNamespace(replies=(), events=(), failures=0)
+
+    monkeypatch.setattr(live_module, "_is_admin", lambda: True)
+    for name in ("WeChatElementTree", "WeChatWindow", "PyAutoGuiDriver", "WeChatPerception"):
+        monkeypatch.setattr(live_module, name, _EmptyPerception)
+    monkeypatch.setattr(live_module, "WeChatBrain", _Brain)
+    monkeypatch.setattr(live_module, "WeChatExecutor", _Executor)
+    monkeypatch.setattr(live_module, "Orchestrator", _Orch)
+    code = run_live(_args(_config(tmp_path, dry_run=False, allow=True), max_sends=1, interval=0))
+    assert code == 1

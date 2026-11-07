@@ -108,3 +108,26 @@ def test_uia_empty_falls_back_to_win32() -> None:
 def test_both_backends_empty_returns_none() -> None:
     backend = _FallbackBackend({"uia": _FakeDesktop([]), "win32": _FakeDesktop([])})
     assert backend.find(title_regex="^微信$", process_names=()) is None
+
+
+def test_foreground_process_name_without_hwnd(monkeypatch: pytest.MonkeyPatch) -> None:
+    import win32gui
+
+    window = WeChatWindow(CFG, FakeWindowBackend(INFO))
+    monkeypatch.setattr(win32gui, "GetForegroundWindow", lambda: 0)
+    assert window.foreground_process_name() is None
+
+
+def test_foreground_process_name_resolves(monkeypatch: pytest.MonkeyPatch) -> None:
+    import sys
+    import types
+
+    fake_gui = types.ModuleType("win32gui")
+    fake_gui.GetForegroundWindow = lambda: 123  # type: ignore[attr-defined]
+    fake_gui.GetWindowThreadProcessId = lambda _hwnd: (1, 999)  # type: ignore[attr-defined]
+    fake_vw = types.ModuleType("vrpa.vision.window")
+    fake_vw._process_name = lambda _pid: "Weixin.exe"  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "win32gui", fake_gui)
+    monkeypatch.setitem(sys.modules, "vrpa.vision.window", fake_vw)
+    window = WeChatWindow(CFG, FakeWindowBackend(INFO))
+    assert window.foreground_process_name() == "Weixin.exe"

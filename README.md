@@ -1,7 +1,7 @@
 # VRPA-WeChat-Agent
 
 > **VRPA（Vision RPA）通用 RPA 框架底座 + 微信参考实现** · MIT License
-> 状态：**M0 ~ M6 全部阶段已完成，真机联调进行中**（微信 4.x / Windows；563 项测试全绿 · 覆盖率 85.04% · ruff / mypy strict 全绿 · 默认 `dry_run`）
+> 状态：**M0 ~ M6 全部阶段已完成，真机联调进行中**（微信 4.x / Windows；570 项测试全绿 · 覆盖率 85.02% · ruff / mypy strict 全绿 · 默认 `dry_run`）
 > M4：队列/拟人延迟/限流/状态机熔断/`--simulate`/接管；M5：OpenAI 兼容客户端（重试+用量）、Prompt 预算裁剪、后处理安全过滤、人设热加载、`llm-ping`。
 
 ---
@@ -100,7 +100,7 @@ vrpa/                     # 通用框架底座（可独立发布/复用）
   ports.py                #   五端口协议 + 跨层 DTO（M0-F-04）
   platform.py             #   PlatformAdapter 协议 + AdapterRegistry（M0-F-04）
   testing/                #   Fakes + contracts 合规测试套件（M0-F-04）
-tests/                    # 563 项测试（配置/日志/异常/接口/双库/CLI/端口/契约/兼容 shim）
+tests/                    # 570 项测试（配置/日志/异常/接口/双库/CLI/端口/契约/兼容 shim）
 docs/                     # 技术方案、行动清单、架构、ADR、适配器指南
 scripts/quality.ps1|.bat  # 一键质量门禁（ruff + mypy strict + pytest + coverage）
 scripts/mouse_record.py   # 真机调试：记录手动拖选鼠标轨迹（用于校准 capture.drag）
@@ -131,7 +131,7 @@ wechat_agent/             # 微信参考实现（六层模块见 §5.1）
 | 记忆层 | SQLite 双库 + 去重对齐 | 流水去重、长期记忆提炼与召回 | 已实现 M3（HistoryStore / 尾部对齐 / LongTermMemory / 异步 job） |
 | 推理层 | DeepSeek / OpenAI 兼容 API | 上下文组装、回复生成与清洗 | 已实现 M5（客户端/预算/后处理/人设热加载/llm-ping） |
 | 执行层 | `pyautogui` + 三重校验 | 粘贴、校验、回车、状态回写 | 已实现 M6-01（内容/目标/回读三重校验；默认 dry_run，真实发送需显式授权 + 真机验收） |
-| 控制层 | CLI 控制台 | 暂停/恢复、人设热更新、`/say` 接管 | 已实现 M6-02（指令集 + 中文 NLU 路由；GUI 托盘待后续） |
+| 控制层 | CLI + Tkinter 控制台 | 暂停/恢复、状态、dry-run 启动停止、真实发送锁定 | 已实现 M6-02 CLI 与 M6-07 GUI 控制台（首版支持启动/停止/紧急停止；托盘待后续） |
 | 扩展层 | 插件协议 + Task Scheduler | `#发圈` 等 RPA 指令 | 已实现 M6-04（Plugin 协议 + 故障隔离 + moments 示例）；Task Scheduler 待后续 |
 
 ### 5.2 感知层规范：假 UIA 树（微信适配器实现要点）
@@ -267,7 +267,7 @@ python -m wechat_agent run --simulate --scenario <场景.json>  # Fake 全链路
 
 ```powershell
 .\scripts\quality.bat          # 一键：ruff check → ruff format → mypy strict → pytest+coverage
-python -m pytest tests -q     # 单元测试（当前 563 passed）
+python -m pytest tests -q     # 单元测试（当前 570 passed）
 python -m mypy                # vrpa 框架包 strict
 ```
 
@@ -276,8 +276,8 @@ python -m mypy                # vrpa 框架包 strict
 | 静态检查 | ruff（E/F/I/UP/B/SIM） | 全绿 |
 | 格式 | ruff format | 全绿 |
 | 类型 | mypy strict（`vrpa`） | 0 error |
-| 测试 | pytest | 563 passed |
-| 覆盖率 | pytest-cov | 85.04%（门禁 ≥85%） |
+| 测试 | pytest | 570 passed |
+| 覆盖率 | pytest-cov | 85.02%（门禁 ≥85%） |
 | 一键 | `scripts\quality.bat` | `QUALITY GATE: PASS` |
 
 ---
