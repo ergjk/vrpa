@@ -350,7 +350,7 @@ python -m mypy                # vrpa 框架包 strict
 
 ---
 
-> 项目治理：[SECURITY.md](SECURITY.md)（安全边界与私密报告） · [ADR 0005 远程控制边界](docs/ADR/0005-remote-control.md) · [CHANGELOG.md](CHANGELOG.md)（变更记录） · [CONTRIBUTING.md](CONTRIBUTING.md)（开发与提交规范） · [.github/labels.yml](.github/labels.yml)（标签定义）
+> 项目治理：[SECURITY.md](SECURITY.md)（安全边界与私密报告） · [ADR 0005 远程控制边界](docs/ADR/0005-remote-control.md) · [V1.0 复盘](docs/RETROSPECTIVE_V1.0.md) · [CHANGELOG.md](CHANGELOG.md)（变更记录） · [CONTRIBUTING.md](CONTRIBUTING.md)（开发与提交规范） · [.github/labels.yml](.github/labels.yml)（标签定义）
 
 ## 13. 交付进度与当前联调位置
 
