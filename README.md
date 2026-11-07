@@ -1,7 +1,7 @@
 # VRPA-WeChat-Agent
 
 > **VRPA（Vision RPA）通用 RPA 框架底座 + 微信参考实现** · MIT License
-> 状态：**V1.0 收口 checkpoint**（微信 4.x / Windows；613 项测试全绿 · 覆盖率 85.18% · ruff / mypy strict 全绿 · 默认 `dry_run` · 真实发送默认关闭）
+> 状态：**V1.0 收口 checkpoint**（微信 4.x / Windows；618 项测试全绿 · 覆盖率 85.39% · ruff / mypy strict 全绿 · 默认 `dry_run` · 真实发送默认关闭）
 > M4：队列/拟人延迟/限流/状态机熔断/`--simulate`/接管；M5：OpenAI 兼容客户端（重试+用量）、Prompt 预算裁剪、后处理安全过滤、人设热加载、`llm-ping`。
 
 ## 0. 10 分钟首跑（新用户先看）
@@ -178,7 +178,7 @@ vrpa/                     # 通用框架底座（可独立发布/复用）
   ports.py                #   五端口协议 + 跨层 DTO（M0-F-04）
   platform.py             #   PlatformAdapter 协议 + AdapterRegistry（M0-F-04）
   testing/                #   Fakes + contracts 合规测试套件（M0-F-04）
-tests/                    # 613 项测试（配置/日志/异常/接口/双库/CLI/端口/契约/兼容 shim）
+tests/                    # 618 项测试（配置/日志/异常/接口/双库/CLI/端口/契约/兼容 shim）
 docs/                     # 技术方案、行动清单、架构、ADR、适配器指南
 scripts/quality.ps1|.bat  # 一键质量门禁（ruff + mypy strict + pytest + coverage）
 scripts/mouse_record.py   # 真机调试：记录手动拖选鼠标轨迹（用于校准 capture.drag）
@@ -386,7 +386,7 @@ python -m wechat_agent run --simulate --scenario <场景.json>  # Fake 全链路
 
 ```powershell
 .\scripts\quality.bat          # 一键：ruff check → ruff format → mypy strict → pytest+coverage
-python -m pytest tests -q     # 单元测试（当前 613 passed）
+python -m pytest tests -q     # 单元测试（当前 618 passed）
 python -m mypy                # vrpa 框架包 strict
 ```
 
@@ -395,8 +395,8 @@ python -m mypy                # vrpa 框架包 strict
 | 静态检查 | ruff（E/F/I/UP/B/SIM） | 全绿 |
 | 格式 | ruff format | 全绿 |
 | 类型 | mypy strict（`vrpa`） | 0 error |
-| 测试 | pytest | 613 passed |
-| 覆盖率 | pytest-cov | 85.18%（门禁 ≥85%） |
+| 测试 | pytest | 618 passed |
+| 覆盖率 | pytest-cov | 85.39%（门禁 ≥85%） |
 | 一键 | `scripts\quality.bat` | `QUALITY GATE: PASS` |
 
 ---
@@ -484,9 +484,9 @@ python -m mypy                # vrpa 框架包 strict
 | M6 执行层/控制台/插件/报告/验收清单 | ✅ 已完成（真实发送默认关闭，灰度入口可用） |
 | **真机联调（当前）** | ✅ 单轮 dry-run、受控 live（`max-sends 1`）、GUI 首版均已通过 |
 | 切会话提速（验证采集合并/去掉重复采集） | ✅ 已关闭重复采集校验 |
-| 多回复/队列消化（`--max-replies` 或 ticks） | ⬜ 待做 |
-| 真实浸泡 + 真机验收清单逐项确认 | 🚧 单轮已过，多轮 soak 待做 |
-| 群聊身份映射与联调 | ⬜ 待做 |
+| 多回复/队列消化（ticks 连续运行） | ✅ ticks 可连续消化；未提供独立 `--max-replies` 参数 |
+| 真实浸泡 + 真机验收清单逐项确认 | ✅ 单轮 dry-run、R5 3/3 受控发送；R6 2h 长时浸泡未跑（可选） |
+| 群聊身份映射与联调 | ⛔ 不在 V1.0 范围（V1.1+） |
 | GUI 控制台 | ✅ Tkinter 首版；系统托盘/暂停恢复待后续 |
 | 真实发送入口（`send --real`，默认关闭） | ✅ 两条灰度已通过：`message_id=86`（手动聚焦）、`87`（自动直接粘贴 + 静态输入区）；默认仍关闭 |
 | 受控真实发送循环（`run --live`，默认关闭） | ✅ 首轮实跑通过：`--max-sends 1`、`sent_count=1`、`message_id=100`；失败即停，默认仍关闭 |
@@ -494,7 +494,7 @@ python -m mypy                # vrpa 框架包 strict
 | A–E 压力测试 | ✅ A 500 轮离线 / B 20 轮真机 dry-run / C 100 memory tasks / D GUI worker 启停 / E 真实发送 1 条 / **R5 真实发送 3/3（`message_id=124/125/126`）** |
 | V1.1 / V1.2 | ⬜ 仅规划 |
 
-**当前位置**：V1.0 收口 checkpoint；真实发送默认关闭，仅保留受控灰度入口；下一步是采集稳定性、live 多轮 soak、GUI 托盘/暂停恢复。
+**当前位置**：V1.0 本地收口完成；真实发送默认关闭，仅保留受控灰度入口。R2-5 旧窗口与 R2-3 无前缀真机样本仍有限；R6 长时浸泡、群聊归档、GUI 托盘/暂停恢复不在 V1.0 范围。
 
 ## 14. AI 生成声明（AI-Generated Declaration）
 
