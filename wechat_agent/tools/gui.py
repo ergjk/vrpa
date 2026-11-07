@@ -124,7 +124,7 @@ class _GuiApp:  # pragma: no cover - Tkinter 界面，逻辑测试覆盖辅助�
         ttk.Entry(row, textvariable=self._chat_var, width=24).pack(side="left")
         ttk.Button(row, text="刷新状态", command=self._refresh).pack(side="left", padx=4)
         ttk.Button(row, text="开始单轮 dry-run", command=self._start_dry_run).pack(side="left", padx=4)
-        ttk.Button(row, text="停止/紧急停止", command=self._stop).pack(side="left", padx=4)
+        ttk.Button(row, text="停止/紧急停止 (Ctrl+Alt+Q)", command=self._stop).pack(side="left", padx=4)
         ttk.Button(row, text="打开日志目录", command=self._open_logs).pack(side="left", padx=4)
 
         real = ttk.LabelFrame(frame, text="真实发送（默认锁定，需人工确认）", padding=6)
@@ -146,7 +146,9 @@ class _GuiApp:  # pragma: no cover - Tkinter 界面，逻辑测试覆盖辅助�
 
         self._log.pack(fill="both", expand=True, pady=4)
         self._append_log("GUI 已启动：真实发送默认锁定；dry-run 仅采集/入库/推理，不发送。")
+        self._append_log("运行期间不要操作 GUI（会抢微信焦点）；紧急停止：Ctrl+Alt+Q。")
         self._refresh()
+        self._start_hotkey_listener()
         self._root.after(200, self._poll)
 
     # ------------------------------------------------------------ 操作
@@ -264,6 +266,33 @@ class _GuiApp:  # pragma: no cover - Tkinter 界面，逻辑测试覆盖辅助�
         except Exception as exc:  # noqa: BLE001
             self._append_log(f"打开目录失败：{exc}")
 
+    def _start_hotkey_listener(self) -> None:
+        """全局注册 Ctrl+Alt+Q，即使 GUI 失去焦点也能紧急停止。"""
+        import ctypes
+        from ctypes import wintypes
+
+        user32 = ctypes.windll.user32
+        MOD_ALT = 0x0001
+        MOD_CONTROL = 0x0002
+        VK_Q = 0x51
+        WM_HOTKEY = 0x0312
+        self._hotkey_thread_id: int | None = None
+
+        def worker() -> None:
+            try:
+                ok = user32.RegisterHotKey(None, 1, MOD_CONTROL | MOD_ALT, VK_Q)
+                if not ok:
+                    self._events.put(("line", "全局停止热键 Ctrl+Alt+Q 注册失败（可能被占用）"))
+                    return
+                msg = wintypes.MSG()
+                while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) != 0:
+                    if msg.message == WM_HOTKEY:
+                        self._events.put(("hotkey", None))
+            except Exception as exc:  # noqa: BLE001
+                self._events.put(("line", f"全局停止热键异常：{exc}"))
+
+        threading.Thread(target=worker, daemon=True).start()
+
     def _poll(self) -> None:
         while True:
             try:
@@ -272,6 +301,9 @@ class _GuiApp:  # pragma: no cover - Tkinter 界面，逻辑测试覆盖辅助�
                 break
             if kind == "line":
                 self._append_log(str(value))
+            elif kind == "hotkey":
+                self._append_log("收到全局紧急停止热键 Ctrl+Alt+Q")
+                self._stop()
             elif kind == "done":
                 self._append_log(f"任务结束，退出码={value}")
                 self._proc = None

@@ -1,6 +1,29 @@
-"""控制层：CLI 控制台、指令注册表、自然语言指令路由（NLU）。
+"""控制层：CLI 控制台、GUI 与未来远程控制共用的接口。"""
 
-交付里程碑：M0-08（骨架 /help /status /quit）、M6-02（完整指令集 + NLU）。
-"""
+from wechat_agent.control.session import (
+    ControlAction,
+    ControlDenied,
+    ControlRequest,
+    ControlResponse,
+    ControlStatus,
+    ControlTransport,
+    LocalControlTransport,
+    RemoteControlPolicy,
+    SessionController,
+    authorize,
+    status_summary,
+)
 
-__all__: list[str] = []
+__all__ = [
+    "ControlAction",
+    "ControlDenied",
+    "ControlRequest",
+    "ControlResponse",
+    "ControlStatus",
+    "ControlTransport",
+    "LocalControlTransport",
+    "RemoteControlPolicy",
+    "SessionController",
+    "authorize",
+    "status_summary",
+]
