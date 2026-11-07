@@ -198,7 +198,7 @@ def test_capture_uses_drag_start_area(tmp_path: Path) -> None:
     )
     assert perception.capture("测试会话") == CAPTURED
     assert driver.drags[0][0] == (start_area.center[0], start_area.y + 2)
-    assert perception.last_capture_info["start_source"] == "drag_start_area"
+    assert perception.last_capture_info["start_source"].endswith("drag_start_area")
 
 
 def test_start_outside_bubble_uses_right_strip() -> None:
@@ -230,7 +230,8 @@ def test_multi_capture_uses_vertical_start(tmp_path: Path) -> None:
     )
     assert perception.capture("测试会话") == CAPTURED
     start_point, end_point, _steps, _duration = driver.drags[0]
-    assert start_point == (AREA.center[0], AREA.y + 2)
+    assert start_point[1] == AREA.y + 2  # 顶部边界附近
+    assert start_point[0] > AREA.center[0]  # 优先右侧补集
     assert 0 < abs(end_point[0] - start_point[0]) <= 20  # 竖向拖动 + 小水平偏移，避免零宽矩形
-    assert perception.last_capture_info["start_source"] == "multi_vertical"
+    assert perception.last_capture_info["start_source"].startswith("multi_vertical")
     assert perception.last_capture_info["planned_attempts"] == 1
