@@ -65,7 +65,8 @@ def _start_outside_bubble(text_area: Rect, bubble_area: Rect) -> tuple[int, int]
     candidates = [span for span in candidates if span[1] > span[0]]
     if not candidates:
         return None
-    left, right = max(candidates, key=lambda span: (span[1] - span[0], span[0]))
+    # 优先取右侧空白带，避免起点落在左侧头像/气泡列；无右侧空间时才退回左侧。
+    left, right = max(candidates, key=lambda span: span[0])
     return ((left + right) // 2, text_area.y + 2)
 
 
@@ -201,6 +202,13 @@ class WeChatPerception:
                     if computed is not None:
                         start = computed
                         start_source = "message_area-bubble_avatar_area"
+        if start_source != "config" and start[0] > area.center[0]:
+            # 起点在右侧空白带：终点改到左下越界，横跨消息文字
+            end = (
+                area.x + int(round(area.width * 0.04)),
+                area.y + int(round(area.height * 1.03)),
+            )
+
         retry_start = (
             area.x + int(round(area.width * _RETRY_DRAG_PLAN[0][0])),
             area.y + int(round(area.height * _RETRY_DRAG_PLAN[0][1])),
@@ -224,6 +232,7 @@ class WeChatPerception:
             "scroll_methods": scroll_methods,
             "start_source": start_source,
             "start_point": start,
+            "end_point": end,
         }
 
         def _reset_to_bottom() -> None:
