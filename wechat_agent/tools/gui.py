@@ -16,7 +16,7 @@ from typing import Any
 
 import yaml
 
-from wechat_agent.core.next_action import explain_exit
+from wechat_agent.core.next_action import explain_failure
 
 __all__ = ["run_gui"]
 
@@ -145,6 +145,7 @@ class _GuiApp:  # pragma: no cover - Tkinter 界面，逻辑测试覆盖辅助�
         self._proc: subprocess.Popen[str] | None = None
         self._temp_config: Path | None = None
         self._active_kind = ""
+        self._recent_output: list[str] = []
         self._events: queue.Queue[tuple[str, object]] = queue.Queue()
         self._log: Any = scrolledtext.ScrolledText(root, height=18, width=110, state="disabled")
         self._status_var = tk.StringVar(value="状态：未运行")
@@ -264,6 +265,7 @@ class _GuiApp:  # pragma: no cover - Tkinter 界面，逻辑测试覆盖辅助�
             self._temp_config = None
             self._active_kind = ""
             return
+        self._recent_output = []
         self._append_log(f"启动 {label}：{' '.join(cmd)}")
         self._status_var.set(f"状态：{label} 运行中")
         threading.Thread(target=reader, daemon=True).start()
@@ -376,7 +378,9 @@ class _GuiApp:  # pragma: no cover - Tkinter 界面，逻辑测试覆盖辅助�
             except queue.Empty:
                 break
             if kind == "line":
-                self._append_log(str(value))
+                line = str(value)
+                self._append_log(line)
+                self._recent_output = [*self._recent_output[-19:], line]
             elif kind == "hotkey":
                 self._append_log("收到全局紧急停止热键 Ctrl+Alt+Q")
                 self._stop()
@@ -399,7 +403,7 @@ class _GuiApp:  # pragma: no cover - Tkinter 界面，逻辑测试覆盖辅助�
                             "已确认收到；本次灰度闭环。" if received else "未确认收到；请检查微信/日志，临时锁已恢复。"
                         )
                     else:
-                        hint = explain_exit(code)
+                        hint = explain_failure(code, "".join(self._recent_output))
                         self._append_log(f"NEXT: {hint.title} —— {hint.next_action}")
                 self._refresh()
         self._root.after(200, self._poll)

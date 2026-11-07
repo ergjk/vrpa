@@ -21,7 +21,7 @@ from vrpa.scheduling.scheduler import Scheduler
 from vrpa.vision.driver import PyAutoGuiDriver
 from wechat_agent.act.executor import WeChatExecutor
 from wechat_agent.brain.client import WeChatBrain
-from wechat_agent.core.next_action import explain_exit, explain_reason
+from wechat_agent.core.next_action import explain_failure, explain_reason
 from wechat_agent.memory.pipeline import MessagePipeline
 from wechat_agent.perception.capture import WeChatPerception
 from wechat_agent.perception.element_tree import WeChatElementTree
@@ -170,7 +170,7 @@ def run_live(args: Any) -> int:
     except (AgentFrameworkError, ConfigError) as exc:
         code = int(getattr(exc, "exit_code", 5))
         print(f"LIVE ERROR: {exc}", file=sys.stderr)
-        print(f"NEXT: {explain_exit(code).next_action}", file=sys.stderr)
+        print(f"NEXT: {explain_failure(code, str(exc)).next_action}", file=sys.stderr)
         return code
     finally:
         memory_store.close()

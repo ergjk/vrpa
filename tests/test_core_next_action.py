@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from wechat_agent.core.next_action import explain_exit, explain_reason
+from wechat_agent.core.next_action import explain_exit, explain_failure, explain_reason
 
 
 def test_exit_codes_have_next_action() -> None:
@@ -23,3 +23,9 @@ def test_reason_mapping() -> None:
     assert "焦点" in explain_reason("窗口未置前").next_action or "窗口" in explain_reason("激活窗口失败").next_action
     assert explain_reason("回读校验失败").safe_to_retry is False
     assert explain_reason("dedup unanchored").safe_to_retry is False
+
+
+def test_reason_beats_exit_code() -> None:
+    hint = explain_failure(3, "LIVE ERROR: 激活窗口失败（hwnd=1）：前台锁未解除")
+    assert "窗口" in hint.next_action or "微信" in hint.next_action
+    assert hint.safe_to_retry is True

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-__all__ = ["FailureHint", "explain_exit", "explain_reason"]
+__all__ = ["FailureHint", "explain_exit", "explain_failure", "explain_reason"]
 
 _EXIT_MAP: dict[int, tuple[str, str, bool]] = {
     2: ("参数/配置错误", "运行 first-run --json 或检查 config.yaml；修正后重试", True),
@@ -32,6 +32,15 @@ def explain_exit(exit_code: int) -> FailureHint:
         ("未知失败", "打开日志 data/logs/agent.log；运行 first-run --json 获取环境结论", False),
     )
     return FailureHint(int(exit_code), title, action, retry)
+
+
+def explain_failure(exit_code: int, output: str = "") -> FailureHint:
+    """优先按输出文本识别真实阶段，再退回退出码映射。"""
+    for keyword in ("管理员", "激活", "前台", "剪贴板", "回读", "校验", "去重", "未锚定", "LLM", "校准", "定位"):
+        if keyword.lower() in output.lower():
+            hint = explain_reason(output)
+            return FailureHint(int(exit_code), hint.title, hint.next_action, hint.safe_to_retry)
+    return explain_exit(exit_code)
 
 
 def explain_reason(reason: str) -> FailureHint:

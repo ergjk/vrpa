@@ -39,7 +39,7 @@ class WindowBackend(Protocol):
         ...
 
     def activate(self, hwnd: int) -> None:
-        """把窗口置为前台。"""
+        """把窗口置于前台；失败即抛 WindowNotForeground。"""
         ...
 
     def is_foreground(self, hwnd: int) -> bool:
@@ -119,24 +119,37 @@ class PywinautoWindowBackend:
 
     def activate(self, hwnd: int) -> None:
         try:
+            import contextlib
+
             import win32api  # type: ignore[import-untyped]
+            import win32con  # type: ignore[import-untyped]
             import win32gui  # type: ignore[import-untyped]
             import win32process  # type: ignore[import-untyped]
 
-            win32gui.ShowWindow(hwnd, 9)  # SW_RESTORE
-            try:
-                win32gui.SetForegroundWindow(hwnd)
-            except Exception:  # noqa: BLE001 - 前台锁：AttachThreadInput 兜底
+            win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+            win32gui.SetForegroundWindow(hwnd)
+            if int(win32gui.GetForegroundWindow()) != int(hwnd):
+                # 前台锁：模拟 Alt 解锁，并同时绑定当前/前台/目标窗口线程。
+                win32api.keybd_event(win32con.VK_MENU, 0, 0, 0)
+                win32api.keybd_event(win32con.VK_MENU, 0, win32con.KEYEVENTF_KEYUP, 0)
+                current_thread = win32api.GetCurrentThreadId()
                 foreground = win32gui.GetForegroundWindow()
                 foreground_thread = win32process.GetWindowThreadProcessId(foreground)[0]
-                current_thread = win32api.GetCurrentThreadId()
-                win32process.AttachThreadInput(current_thread, foreground_thread, True)
+                target_thread = win32process.GetWindowThreadProcessId(hwnd)[0]
+                attached: list[int] = []
+                for thread_id in {foreground_thread, target_thread}:
+                    if thread_id and win32process.AttachThreadInput(current_thread, thread_id, True):
+                        attached.append(thread_id)
                 try:
                     win32gui.BringWindowToTop(hwnd)
                     win32gui.SetForegroundWindow(hwnd)
                     win32gui.SetFocus(hwnd)
                 finally:
-                    win32process.AttachThreadInput(current_thread, foreground_thread, False)
+                    for thread_id in attached:
+                        win32process.AttachThreadInput(current_thread, thread_id, False)
+            if int(win32gui.GetForegroundWindow()) != int(hwnd):
+                with contextlib.suppress(Exception):
+                    win32gui.SwitchToThisWindow(hwnd, True)
             if int(win32gui.GetForegroundWindow()) != int(hwnd):
                 raise WindowNotForeground(f"激活窗口失败（hwnd={hwnd}）：前台锁未解除")
         except WindowNotForeground:
