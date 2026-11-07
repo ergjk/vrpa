@@ -196,8 +196,12 @@ class WeChatPerception:
             else:
                 y = area.y + area.height - 2
                 start_source = "history_vertical"
+            # 起点/终点 x 完全相同会形成零宽矩形，微信不会产生选区；
+            # 保留竖向拖动，仅加约 12px 的水平偏移。
+            offset_x = 12
+            end_x = x + offset_x if x + offset_x < area.right - 2 else x - offset_x
             start = (x, y)
-            end = (x, end[1])
+            end = (end_x, end[1])
             # 多条目/历史只拖一次：失败直接报错，不再做对角线兜底。
             attempts: list[tuple[tuple[int, int], tuple[int, int]]] = [(start, end)]
         else:
