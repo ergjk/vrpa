@@ -14,6 +14,7 @@ from vrpa.llm.policy import TrimPolicyResolver
 from vrpa.llm.postprocess import postprocess
 from vrpa.llm.prompt import fit_prompt
 from vrpa.ports import LLMResult, MemoryStore
+from wechat_agent.identity import IdentityMap
 from wechat_agent.knowledge.provider import build_knowledge_base
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -29,6 +30,7 @@ class WeChatBrain:
         *,
         client: LLMClient | None = None,
         memory: MemoryStore | None = None,
+        identity: IdentityMap | None = None,
         persona: PersonaLoader | None = None,
         knowledge: KnowledgeBase | None = None,
         sessions_root: Path | None = None,
@@ -36,6 +38,7 @@ class WeChatBrain:
         self._config = config
         self._client = client
         self._memory = memory
+        self._identity = identity
         self._persona = persona or PersonaLoader(config.llm.persona_path)
         self._knowledge = knowledge if knowledge is not None else build_knowledge_base(config)
         self._trim_policy = TrimPolicyResolver(
@@ -91,8 +94,12 @@ class WeChatBrain:
                 memories, history = [], []
 
         knowledge_chunks = self._knowledge.select(session, incoming)
+        persona = self._persona.load()
+        note = self._identity_note(session)
+        if note:
+            persona = f"{persona}\n\n{note}"
         plan = fit_prompt(
-            self._persona.load(),
+            persona,
             knowledge_chunks,
             memories,
             history,
@@ -121,6 +128,22 @@ class WeChatBrain:
             usage=result.usage,
             latency_ms=result.latency_ms,
         )
+
+    def _identity_note(self, session: str | None) -> str:
+        if self._identity is None or self._identity.is_empty():
+            return ""
+        self_names = "、".join(self._identity.self_nicknames)
+        other_names = "、".join(self._identity.nicknames_for(session or ""))
+        parts: list[str] = []
+        if self_names:
+            parts.append(f"你是「{self_names}」")
+        if other_names:
+            parts.append(f"当前对方是「{other_names}」")
+        if not parts:
+            return ""
+        note = "；".join(parts) + "。"
+        note += "你自己发出的消息在上下文里标记为 assistant；不要把你自己当成第三方，也不要使用“你俩”这种把自己排除在外的说法。"
+        return note
 
     def ping(self) -> float:
         return self._ensure_client().ping()

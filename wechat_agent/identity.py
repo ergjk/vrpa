@@ -39,17 +39,22 @@ class GroupIdentity:
 class IdentityMap:
     chats: dict[str, ChatIdentity] = field(default_factory=dict)
     groups: dict[str, GroupIdentity] = field(default_factory=dict)
+    self_nicknames: tuple[str, ...] = ()
 
     def nicknames_for(self, chat: str) -> tuple[str, ...]:
         entry = self.chats.get(chat)
         return entry.nicknames if entry is not None else ()
+
+    def is_self(self, sender: str | None) -> bool:
+        name = (sender or "").strip()
+        return bool(name) and name in self.self_nicknames
 
     def canonical_for(self, chat: str) -> str | None:
         entry = self.chats.get(chat) or self.groups.get(chat)
         return entry.canonical_id if entry is not None else None
 
     def is_empty(self) -> bool:
-        return not self.chats and not self.groups
+        return not self.chats and not self.groups and not self.self_nicknames
 
 
 def _chat_identity(raw: object, where: str) -> ChatIdentity:
@@ -90,11 +95,16 @@ def _parse_document(document: object, source: str) -> IdentityMap:
         raise ConfigError(f"身份映射 {source} 顶层必须是表（table）")
     chats: dict[str, ChatIdentity] = {}
     groups: dict[str, GroupIdentity] = {}
+    self_raw = document.get("self")
+    self_nicknames: tuple[str, ...] = ()
+    if self_raw is not None:
+        self_identity = _chat_identity(self_raw, "self")
+        self_nicknames = self_identity.nicknames
     for chat, raw in dict(document.get("chats", {})).items():
         chats[str(chat)] = _chat_identity(raw, f"chats.{chat}")
     for group, raw in dict(document.get("groups", {})).items():
         groups[str(group)] = _group_identity(raw, f"groups.{group}")
-    return IdentityMap(chats=chats, groups=groups)
+    return IdentityMap(chats=chats, groups=groups, self_nicknames=self_nicknames)
 
 
 def load_identity(data_dir: Path | str) -> IdentityMap:

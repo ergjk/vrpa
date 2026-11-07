@@ -16,6 +16,9 @@ TOML_TEXT = """
 canonical_id = "wxid_test"
 nicknames = ["三", "三三"]
 
+[self]
+nicknames = ["王"]
+
 [groups."测试群"]
 canonical_id = "123@chatroom"
 [groups."测试群".members]
@@ -30,6 +33,8 @@ def test_load_toml(tmp_path: Path) -> None:
     assert identity.canonical_for("王衢665") == "wxid_test"
     assert identity.canonical_for("测试群") == "123@chatroom"
     assert identity.groups["测试群"].members["三"] == "wxid_member"
+    assert identity.self_nicknames == ("王",)
+    assert identity.is_self("王") is True and identity.is_self("三") is False
 
 
 def test_missing_returns_empty(tmp_path: Path) -> None:

@@ -13,6 +13,7 @@ from vrpa.memory.store import SQLiteMemoryStore
 from vrpa.ports import MemoryItem
 from wechat_agent.brain.client import WeChatBrain
 from wechat_agent.core.config import load_config
+from wechat_agent.identity import ChatIdentity, IdentityMap
 
 ROOT = Path(__file__).resolve().parents[1]
 CFG = load_config(ROOT / "config.yaml")
@@ -33,7 +34,7 @@ class FakeTransport:
         }
 
 
-def _brain(transport: FakeTransport, memory=None) -> WeChatBrain:
+def _brain(transport: FakeTransport, memory=None, identity=None) -> WeChatBrain:
     client = LLMClient(
         api_key="sk-test",
         base_url="https://api.example.com/v1",
@@ -41,7 +42,7 @@ def _brain(transport: FakeTransport, memory=None) -> WeChatBrain:
         transport=transport,
         sleep=lambda _s: None,
     )
-    return WeChatBrain(CFG, client=client, memory=memory)
+    return WeChatBrain(CFG, client=client, memory=memory, identity=identity)
 
 
 def test_generate_success(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -92,3 +93,17 @@ def test_memory_injected_into_prompt(tmp_path: Path, monkeypatch: pytest.MonkeyP
 def test_missing_user_message(monkeypatch: pytest.MonkeyPatch) -> None:
     with pytest.raises(LLMError, match="缺少用户消息"):
         _brain(FakeTransport()).generate([{"role": "system", "content": "x"}])
+
+
+def test_identity_note_in_system_prompt() -> None:
+    identity = IdentityMap(
+        chats={"王衢665": ChatIdentity(nicknames=("三",))},
+        self_nicknames=("王",),
+    )
+    transport = FakeTransport()
+    brain = _brain(transport, identity=identity)
+    brain.generate([{"role": "user", "content": "在吗"}], session="王衢665")
+    system_content = transport.calls[0]["payload"]["messages"][0]["content"]
+    assert "你是「王」" in system_content
+    assert "对方是「三」" in system_content
+    assert "assistant" in system_content

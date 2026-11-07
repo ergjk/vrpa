@@ -16,3 +16,6 @@ nicknames = ["三"]
 # canonical_id = "12345678901@chatroom"
 # [groups."测试群备注".members]
 # "三" = "wxid_member_placeholder"
+
+[self]
+nicknames = ["王"]   # 机器人自己的微信昵称

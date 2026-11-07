@@ -22,6 +22,7 @@ from vrpa.vision.driver import PyAutoGuiDriver
 from wechat_agent.act.executor import WeChatExecutor
 from wechat_agent.brain.client import WeChatBrain
 from wechat_agent.core.next_action import explain_failure, explain_reason
+from wechat_agent.identity import load_identity
 from wechat_agent.memory.pipeline import MessagePipeline
 from wechat_agent.perception.capture import WeChatPerception
 from wechat_agent.perception.element_tree import WeChatElementTree
@@ -81,13 +82,15 @@ def run_live(args: Any) -> int:
     )
     try:
         history = HistoryStore(databases)
+        identity = load_identity(config.data_dir)
         pipeline = MessagePipeline(
             history,
             dedup_window=int(config.capture.dedup_recent_window),
             low_confidence_policy=str(config.capture.low_confidence_policy),
+            identity=identity,
         )
         guarded = _GuardedPerception(perception, history, parser)
-        brain = WeChatBrain(config, memory=memory_store)
+        brain = WeChatBrain(config, memory=memory_store, identity=identity)
 
         def _capture_after_send(session: str) -> str:
             last = ""

@@ -9,6 +9,7 @@ from vrpa.memory.dedup import Alignment, align_tail
 from vrpa.memory.history import HistoryRecord, HistoryStore
 from vrpa.memory.store import content_hash
 from vrpa.ports import IncomingMessage
+from wechat_agent.identity import IdentityMap
 
 __all__ = ["IngestResult", "MessagePipeline"]
 
@@ -34,12 +35,14 @@ class MessagePipeline:
         *,
         dedup_window: int = 200,
         low_confidence_policy: str = "ignore",
+        identity: IdentityMap | None = None,
     ) -> None:
         if low_confidence_policy not in {"ignore", "queue_confirm"}:
             raise ValueError(f"未知 low_confidence_policy：{low_confidence_policy}")
         self._history = history
         self._dedup_window = max(1, dedup_window)
         self._policy = low_confidence_policy
+        self._identity = identity
 
     # ------------------------------------------------------------ 入库
     def ingest(self, chat: str, incoming: Sequence[IncomingMessage]) -> IngestResult:
@@ -79,14 +82,16 @@ class MessagePipeline:
         for item in messages:
             if not item.content.strip():
                 continue
-            # 多端识别：无发送者前缀 = 主人在其它设备发送，入库但不回复
-            direction = "self" if item.sender is None else "in"
+            # 多端/自身识别：无发送者前缀，或发送者是机器人自己的昵称，都入库但不回复
+            sender = item.sender.strip() if item.sender else None
+            is_self = sender is None or (self._identity is not None and self._identity.is_self(sender))
+            direction = "self" if is_self else "in"
             message_id = self._history.append(
                 chat,
                 item.content,
                 direction=direction,
                 role="assistant" if direction == "self" else "user",
-                sender=item.sender,
+                sender=sender,
                 ts=item.ts,
                 source="rpa_capture",
                 status=status,

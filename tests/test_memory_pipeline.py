@@ -9,6 +9,7 @@ import pytest
 from vrpa.memory.db import Databases, init_databases
 from vrpa.memory.history import HistoryStore
 from vrpa.ports import IncomingMessage
+from wechat_agent.identity import IdentityMap
 from wechat_agent.memory.pipeline import MessagePipeline
 
 
@@ -74,6 +75,18 @@ def test_multi_device_self_messages(history: HistoryStore) -> None:
     assert [record.content for record in result.self_messages] == ["我手机发的"]
     assert [record.content for record in result.queued] == ["你好"]
     assert history.last("张三").direction == "in"  # type: ignore[union-attr]
+
+
+def test_self_nickname_is_not_queued(history: HistoryStore) -> None:
+    identity = IdentityMap(self_nicknames=("王",))
+    result = MessagePipeline(history, identity=identity).ingest(
+        "张三",
+        [IncomingMessage(content="我自己发的", sender="王"), _incoming("你好")],
+    )
+    assert [record.content for record in result.self_messages] == ["我自己发的"]
+    assert [record.content for record in result.queued] == ["你好"]
+    assert result.self_messages[0].direction == "self"
+    assert result.self_messages[0].role == "assistant"
 
 
 def test_empty_incoming(history: HistoryStore) -> None:

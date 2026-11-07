@@ -27,6 +27,7 @@ from vrpa.scheduling.queue import MessageQueue
 from vrpa.scheduling.scheduler import Scheduler
 from wechat_agent.act.executor import WeChatExecutor
 from wechat_agent.brain.client import WeChatBrain
+from wechat_agent.identity import load_identity
 from wechat_agent.memory.pipeline import MessagePipeline
 from wechat_agent.perception.capture import WeChatPerception
 from wechat_agent.perception.parser import WeChatParser
@@ -126,17 +127,19 @@ def execute_dry_run(
     memory_store = SQLiteMemoryStore(config.data_dir)
     try:
         history = HistoryStore(databases)
+        identity = load_identity(config.data_dir)
         pipeline = MessagePipeline(
             history,
             dedup_window=int(config.capture.dedup_recent_window),
             low_confidence_policy=str(config.capture.low_confidence_policy),
+            identity=identity,
         )
         mode = "echo"
         if brain is None:
             if force_llm or config.api_key():
                 if not config.api_key():
                     raise ConfigError("--llm 需要先配置 DEEPSEEK_API_KEY")
-                brain = WeChatBrain(config, memory=memory_store)
+                brain = WeChatBrain(config, memory=memory_store, identity=identity)
                 mode = "llm"
             else:
                 brain = EchoBrain()
