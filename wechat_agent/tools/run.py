@@ -185,6 +185,7 @@ def _parse_args(argv: Sequence[str]) -> argparse.Namespace:
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--simulate", action="store_true", help="Fake 后端模拟全链路")
     mode.add_argument("--real", action="store_true", help="真实采集 dry-run（仅 dry_run=true，绝不真实发送）")
+    mode.add_argument("--live", action="store_true", help="受控真实发送循环（默认拒绝，需显式授权）")
     parser.add_argument("--scenario", default=None, help="模拟场景 JSON（仅 --simulate）")
     parser.add_argument("--chat", default=None, help="目标会话（仅 --real）")
     parser.add_argument("--llm", action="store_true", help="强制真实 LLM（仅 --real，需要 API Key）")
@@ -198,6 +199,9 @@ def _parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--ticks", type=int, default=None, help="tick 数（--real 默认 1）")
     parser.add_argument("--warmup", type=float, default=5.0, help="--real 启动倒计时秒数（切到微信）")
     parser.add_argument("--settle", type=float, default=1.5, help="--real 切会话后的稳定等待秒数")
+    parser.add_argument("--max-sends", type=int, default=0, help="--live 单次最多真实发送条数（必填）")
+    parser.add_argument("--interval", type=float, default=30.0, help="--live 每轮间隔秒数")
+    parser.add_argument("--i-understand-risk", action="store_true", help="--live 真实发送风险确认")
     parser.add_argument("--json", action="store_true", help="JSON 输出")
     return parser.parse_args(list(argv))
 
@@ -211,6 +215,10 @@ def run_run(argv: Sequence[str]) -> int:
         from wechat_agent.tools.run_real import run_real
 
         return run_real(args)
+    if args.live:
+        from wechat_agent.tools.run_live import run_live
+
+        return run_live(args)
     if not args.scenario:
         print("--simulate 需要 --scenario 场景文件", file=sys.stderr)
         return 2

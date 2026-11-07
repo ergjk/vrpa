@@ -1,7 +1,7 @@
 # VRPA-WeChat-Agent
 
 > **VRPA（Vision RPA）通用 RPA 框架底座 + 微信参考实现** · MIT License
-> 状态：**M0 ~ M6 全部阶段已完成，真机联调进行中**（微信 4.x / Windows；551 项测试全绿 · 覆盖率 86.28% · ruff / mypy strict 全绿 · 默认 `dry_run`）
+> 状态：**M0 ~ M6 全部阶段已完成，真机联调进行中**（微信 4.x / Windows；563 项测试全绿 · 覆盖率 85.04% · ruff / mypy strict 全绿 · 默认 `dry_run`）
 > M4：队列/拟人延迟/限流/状态机熔断/`--simulate`/接管；M5：OpenAI 兼容客户端（重试+用量）、Prompt 预算裁剪、后处理安全过滤、人设热加载、`llm-ping`。
 
 ---
@@ -100,7 +100,7 @@ vrpa/                     # 通用框架底座（可独立发布/复用）
   ports.py                #   五端口协议 + 跨层 DTO（M0-F-04）
   platform.py             #   PlatformAdapter 协议 + AdapterRegistry（M0-F-04）
   testing/                #   Fakes + contracts 合规测试套件（M0-F-04）
-tests/                    # 551 项测试（配置/日志/异常/接口/双库/CLI/端口/契约/兼容 shim）
+tests/                    # 563 项测试（配置/日志/异常/接口/双库/CLI/端口/契约/兼容 shim）
 docs/                     # 技术方案、行动清单、架构、ADR、适配器指南
 scripts/quality.ps1|.bat  # 一键质量门禁（ruff + mypy strict + pytest + coverage）
 scripts/mouse_record.py   # 真机调试：记录手动拖选鼠标轨迹（用于校准 capture.drag）
@@ -267,7 +267,7 @@ python -m wechat_agent run --simulate --scenario <场景.json>  # Fake 全链路
 
 ```powershell
 .\scripts\quality.bat          # 一键：ruff check → ruff format → mypy strict → pytest+coverage
-python -m pytest tests -q     # 单元测试（当前 551 passed）
+python -m pytest tests -q     # 单元测试（当前 563 passed）
 python -m mypy                # vrpa 框架包 strict
 ```
 
@@ -276,8 +276,8 @@ python -m mypy                # vrpa 框架包 strict
 | 静态检查 | ruff（E/F/I/UP/B/SIM） | 全绿 |
 | 格式 | ruff format | 全绿 |
 | 类型 | mypy strict（`vrpa`） | 0 error |
-| 测试 | pytest | 551 passed |
-| 覆盖率 | pytest-cov | 86.28%（门禁 ≥85%） |
+| 测试 | pytest | 563 passed |
+| 覆盖率 | pytest-cov | 85.04%（门禁 ≥85%） |
 | 一键 | `scripts\quality.bat` | `QUALITY GATE: PASS` |
 
 ---
@@ -370,6 +370,7 @@ python -m mypy                # vrpa 框架包 strict
 | 群聊身份映射与联调 | ⬜ 待做 |
 | GUI 托盘控制台 | ⬜ 待做 |
 | 真实发送入口（`send --real`，默认关闭） | ✅ 两条灰度已通过：`message_id=86`（手动聚焦）、`87`（自动直接粘贴 + 静态输入区）；默认仍关闭 |
+| 受控真实发送循环（`run --live`，默认关闭） | ✅ 已实现，需管理员 + `--i-understand-risk` + `--max-sends` + 双锁 + allowlist；失败即停 |
 | V1.1 / V1.2 | ⬜ 仅规划 |
 
 **当前位置**：M0~M6 代码全部完成；真机联调处于“单轮真实 dry-run 已验证、时序与去重边界已修正”的 checkpoint，下一步是切会话提速 / 多回复 / 浸泡与验收，尚未开放真实发送。
