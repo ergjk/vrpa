@@ -119,10 +119,29 @@ class PywinautoWindowBackend:
 
     def activate(self, hwnd: int) -> None:
         try:
+            import win32api  # type: ignore[import-untyped]
             import win32gui  # type: ignore[import-untyped]
+            import win32process  # type: ignore[import-untyped]
 
             win32gui.ShowWindow(hwnd, 9)  # SW_RESTORE
-            win32gui.SetForegroundWindow(hwnd)
+            try:
+                win32gui.SetForegroundWindow(hwnd)
+            except Exception:  # noqa: BLE001 - 前台锁：AttachThreadInput 兜底
+                foreground = win32gui.GetForegroundWindow()
+                target_thread = win32process.GetWindowThreadProcessId(hwnd)[0]
+                foreground_thread = win32process.GetWindowThreadProcessId(foreground)[0]
+                current_thread = win32api.GetCurrentThreadId()
+                win32process.AttachThreadInput(current_thread, foreground_thread, True)
+                try:
+                    win32gui.BringWindowToTop(hwnd)
+                    win32gui.SetForegroundWindow(hwnd)
+                    win32gui.SetFocus(hwnd)
+                finally:
+                    win32process.AttachThreadInput(current_thread, foreground_thread, False)
+            if int(win32gui.GetForegroundWindow()) != int(hwnd):
+                raise WindowNotForeground(f"激活窗口失败（hwnd={hwnd}）：前台锁未解除")
+        except WindowNotForeground:
+            raise
         except Exception as exc:  # noqa: BLE001
             raise WindowNotForeground(f"激活窗口失败（hwnd={hwnd}）：{exc}") from exc
 
