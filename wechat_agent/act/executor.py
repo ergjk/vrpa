@@ -37,6 +37,11 @@ class SendChecks:
         return self.content_ok and self.target_ok and self.verify_ok and not self.issues
 
 
+def _normalize_for_compare(value: str) -> str:
+    """输入框复制出的换行是 \r\n，LLM 文本是 \n；比较前统一。"""
+    return value.replace("\r\n", "\n").replace("\r", "\n").strip()
+
+
 class WeChatExecutor:
     """发送执行器：dry_run 安全隔离 + 三重校验。"""
 
@@ -112,7 +117,7 @@ class WeChatExecutor:
             self._driver.hotkey("ctrl", "a")
             self._driver.hotkey("ctrl", "c")
             self._sleep(0.2)
-            return str(self._driver.clipboard_get()).strip() == text.strip()
+            return _normalize_for_compare(str(self._driver.clipboard_get())) == _normalize_for_compare(text)
 
         # 首选：不移动鼠标，直接粘贴（微信切回会话后输入框通常已聚焦）
         # 仅当直接粘贴回读失败时，才点击输入框作为第二选项。
@@ -132,7 +137,7 @@ class WeChatExecutor:
         self._sleep(1.0)
         observed = str(self._capture(session))
         self.last_observed = observed
-        if text.strip() not in observed:
+        if _normalize_for_compare(text) not in _normalize_for_compare(observed):
             raise VerifyFailed(
                 f"回读校验失败：发送后在会话 {session!r} 未观察到内容"
                 "（Enter 已按下，消息可能已发送；请人工确认，勿自动重试）"

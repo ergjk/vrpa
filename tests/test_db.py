@@ -68,7 +68,7 @@ def test_init_creates_required_tables(dbs) -> None:
         indexes = {row["name"] for row in dbs.conn(kind).execute("SELECT name FROM sqlite_master WHERE type = 'index'")}
         missing_indexes = set(REQUIRED_INDEXES[kind]) - indexes
         assert not missing_indexes, f"{kind} 缺索引：{missing_indexes}"
-    assert sum(len(dbs.table_names(kind)) for kind in DB_KINDS) == 12
+    assert sum(len(dbs.table_names(kind)) for kind in DB_KINDS) == 13
 
 
 def test_versions_and_wal(dbs) -> None:
@@ -160,7 +160,7 @@ def test_verify_detects_missing_index_and_init_heals(tmp_path: Path) -> None:
 def test_schema_report(dbs) -> None:
     report = schema_report(dbs)
     assert report["ok"] is True
-    assert report["total_tables"] == 12
+    assert report["total_tables"] == 13
     assert set(report["databases"]) == set(DB_KINDS)
     for kind in DB_KINDS:
         info = report["databases"][kind]
@@ -183,7 +183,7 @@ def test_db_check_json(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> No
     payload = json.loads(capsys.readouterr().out)
     assert code == 0
     assert payload["ok"] is True
-    assert payload["total_tables"] == 12
+    assert payload["total_tables"] == 13
 
 
 def test_db_check_repair(tmp_path: Path) -> None:

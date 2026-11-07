@@ -27,7 +27,7 @@ from typing import Any
 
 from vrpa.errors import DBError
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 SCHEMA_FILE = Path(__file__).with_name("schema.sql")
 DB_KINDS: tuple[str, ...] = ("chat_history", "memory")
 DB_FILES: dict[str, str] = {"chat_history": "chat_history.db", "memory": "memory.db"}
@@ -38,6 +38,7 @@ REQUIRED_TABLES: dict[str, tuple[str, ...]] = {
         "chats",
         "messages",
         "messages_fts",
+        "pending_replies",
         "extract_cursor",
         "audit_log",
         "tasks",

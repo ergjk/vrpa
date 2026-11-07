@@ -38,3 +38,13 @@ def test_limit_and_empty(tmp_path: Path) -> None:
     for i in range(10):
         history.append("张三", f"m{i}", direction="in")
     assert len(unanswered_incoming(history, "张三", limit=3)) == 3
+
+
+def test_pending_outbox_roundtrip(tmp_path: Path) -> None:
+    history = _history(tmp_path)
+    message_id = history.append("张三", "需要回复", direction="in")
+    history.add_pending_reply("张三", message_id, "需要回复")
+    pending = history.pending_replies("张三")
+    assert [item.message_id for item in pending] == [message_id]
+    history.complete_pending_reply("张三", message_id)
+    assert history.pending_replies("张三") == ()

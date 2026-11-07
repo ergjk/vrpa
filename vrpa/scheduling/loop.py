@@ -165,6 +165,7 @@ class Orchestrator:
         sleep: Callable[[float], None] = time.sleep,
         max_replies_per_tick: int = 1,
         memory_job: Any | None = None,
+        pending_store: Any | None = None,
     ) -> None:
         self._config = config
         self._perception = perception
@@ -174,13 +175,14 @@ class Orchestrator:
         self._executor = executor
         self._humanizer = humanizer
         self._scheduler = scheduler
-        self._queue = queue or MessageQueue()
+        self._queue = queue if queue is not None else MessageQueue()
         self._machine = machine or RunStateMachine()
         self._breaker = breaker or CircuitBreaker()
         self._control = control or ControlChannel()
         self._sleep = sleep
         self._max_replies = max(1, max_replies_per_tick)
         self._memory_job = memory_job
+        self._pending_store = pending_store
         self._tick = 0
         self._chat_index = 0
         self._events: list[str] = []
@@ -267,6 +269,9 @@ class Orchestrator:
             ingested = len(ingest.inserted)
             duplicates = ingest.duplicates
             for record in ingest.queued:
+                if self._pending_store is not None:
+                    with suppress(Exception):
+                        self._pending_store.add_pending_reply(chat, record.id, record.content)
                 self._queue.push(
                     QueuedMessage(
                         chat=chat,
@@ -408,6 +413,9 @@ class Orchestrator:
                 if not outcome.ok:
                     raise RuntimeError(f"发送失败：{outcome.stage}")
                 self._pipeline.writeback(item.chat, result.text)
+                if self._pending_store is not None and item.message_id is not None:
+                    with suppress(Exception):
+                        self._pending_store.complete_pending_reply(item.chat, item.message_id)
                 self._scheduler.note_send(item.chat)
                 self._breaker.record_success()
                 replies.append(result.text)

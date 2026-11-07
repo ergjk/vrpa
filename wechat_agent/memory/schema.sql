@@ -110,6 +110,18 @@ CREATE TABLE IF NOT EXISTS runtime_state (
   updated_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
 );
 
+
+CREATE TABLE IF NOT EXISTS pending_replies (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  chat_id     INTEGER NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
+  message_id  INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+  content     TEXT NOT NULL,
+  status      TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'done')),
+  created_at  TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+  UNIQUE(chat_id, message_id)
+);
+CREATE INDEX IF NOT EXISTS idx_pending_chat ON pending_replies(chat_id, status, id);
+
 -- ============================================================================
 -- [DB: memory]
 -- ============================================================================

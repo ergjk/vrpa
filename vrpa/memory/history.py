@@ -14,7 +14,7 @@ from vrpa.errors import DBError
 from vrpa.memory.db import Databases
 from vrpa.memory.store import content_hash, normalize_text
 
-__all__ = ["ChatRecord", "HistoryRecord", "HistoryStore"]
+__all__ = ["ChatRecord", "HistoryRecord", "HistoryStore", "PendingReply"]
 
 _COLUMNS = (
     "m.id, c.name, m.direction, m.content, m.role, m.sender_name, m.msg_ts, "
@@ -38,6 +38,15 @@ class HistoryRecord:
     content_hash: str
     dedup_count: int
     created_at: str = ""
+
+
+@dataclass(frozen=True)
+class PendingReply:
+    """待回复出站消息（outbox）。"""
+
+    message_id: int
+    content: str
+    created_at: str
 
 
 @dataclass(frozen=True)
@@ -168,6 +177,33 @@ class HistoryStore:
             (chat_id, limit),
         ).fetchall()
         return tuple(self._to_record(row) for row in reversed(rows))
+
+    def add_pending_reply(self, chat: str, message_id: int, content: str) -> None:
+        chat_id = self.ensure_chat(chat)
+        self._databases.history.execute(
+            "INSERT OR IGNORE INTO pending_replies(chat_id, message_id, content) VALUES(?,?,?)",
+            (chat_id, message_id, content),
+        )
+        self._databases.history.commit()
+
+    def pending_replies(self, chat: str, limit: int = 10) -> tuple[PendingReply, ...]:
+        if limit <= 0:
+            return ()
+        chat_id = self.ensure_chat(chat)
+        rows = self._databases.history.execute(
+            "SELECT message_id, content, created_at FROM pending_replies "
+            "WHERE chat_id = ? AND status = 'pending' ORDER BY id LIMIT ?",
+            (chat_id, limit),
+        ).fetchall()
+        return tuple(PendingReply(int(row[0]), str(row[1]), str(row[2])) for row in rows)
+
+    def complete_pending_reply(self, chat: str, message_id: int) -> None:
+        chat_id = self.ensure_chat(chat)
+        self._databases.history.execute(
+            "UPDATE pending_replies SET status = 'done' WHERE chat_id = ? AND message_id = ?",
+            (chat_id, message_id),
+        )
+        self._databases.history.commit()
 
     def tail_hashes(self, chat: str, limit: int) -> tuple[str, ...]:
         """尾部锚点哈希（旧 -> 新）。"""
