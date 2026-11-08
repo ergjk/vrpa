@@ -10,10 +10,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vrpa-wechat-agent"
-version = "0.1.0"
+version = "1.0.0"
 description = "让电脑按人的节奏完成重复操作的本地自动化助手框架；零 Hook 的微信智能对话代理（Vision-RPA Edition），底部为可复用的多平台 RPA 框架"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = { text = "MIT" }
 dependencies = [
   "PyYAML>=6.0.1",
