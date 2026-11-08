@@ -4,6 +4,9 @@
 > 状态：**V1.0 收口 checkpoint**（微信 4.x / Windows；618 项测试全绿 · 覆盖率 85.39% · ruff / mypy strict 全绿 · 默认 `dry_run` · 真实发送默认关闭）
 > M4：队列/拟人延迟/限流/状态机熔断/`--simulate`/接管；M5：OpenAI 兼容客户端（重试+用量）、Prompt 预算裁剪、后处理安全过滤、人设热加载、`llm-ping`。
 
+> **当前第一瓶颈：聊天记录获取**（历史回填、覆盖率证明、群成员身份），不是回复生成。
+> 说明与征集：[docs/CHAT_ACQUISITION_BOTTLENECK.md](docs/CHAT_ACQUISITION_BOTTLENECK.md) · [Issue 模板](.github/ISSUE_TEMPLATE/chat-acquisition.md)
+
 ## 0. 10 分钟首跑（新用户先看）
 
 > 目标：先跑通 **dry-run**，不真实发送。不要一上来就开真实发送。
