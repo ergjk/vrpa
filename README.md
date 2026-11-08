@@ -1,5 +1,7 @@
 # VRPA-WeChat-Agent
 
+> 一个面向个人电脑的本地自动化助手框架：让软件按人的节奏完成重复操作，数据和决定权留在自己手里。
+>
 > **VRPA（Vision RPA）通用 RPA 框架底座 + 微信参考实现** · MIT License
 > 状态：**V1.0 收口 checkpoint**（微信 4.x / Windows；618 项测试全绿 · 覆盖率 85.39% · ruff / mypy strict 全绿 · 默认 `dry_run` · 真实发送默认关闭）
 > M4：队列/拟人延迟/限流/状态机熔断/`--simulate`/接管；M5：OpenAI 兼容客户端（重试+用量）、Prompt 预算裁剪、后处理安全过滤、人设热加载、`llm-ping`。
